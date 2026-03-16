@@ -75,6 +75,12 @@ Everything else gets rebuilt.
 - Include RLS policies for user-scoped tables
 - Include pgvector extension and HNSW index
 
+### Task 0.5: Run Schema in Supabase (MANUAL STEP — tell the user)
+> **⚠️ STOP and tell the user:**
+> "Before I continue, you need to run the database schema in Supabase. Open your Supabase dashboard → SQL Editor → paste the contents of `castcue-app/supabase/schema.sql` → hit Run. Tell me when it's done."
+>
+> **Do NOT proceed until the user confirms the schema has been run.**
+
 **After completing Phase 0:** Continue to Phase 1. No checkpoint needed.
 
 ---
