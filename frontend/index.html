@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CastCue v2</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0a0a0f;
+      --bg-card: #12121a;
+      --bg-elevated: #1a1a25;
+      --border: #2a2a3a;
+      --text-primary: #f0f0f5;
+      --text-secondary: #8888aa;
+      --accent: #7c5cff;
+      --accent-glow: rgba(124, 92, 255, 0.3);
+      --success: #22c55e;
+      --warning: #eab308;
+      --error: #ef4444;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background: var(--bg-dark);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* Background pattern */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: 
+        radial-gradient(circle at 20% 20%, var(--accent-glow) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(92, 124, 255, 0.15) 0%, transparent 50%);
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 3rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+      background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+    }
+
+    .card h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .card h2::before {
+      content: '';
+      display: block;
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      border-radius: 50%;
+    }
+
+    label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    textarea {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+      min-height: 200px;
+      resize: vertical;
+    }
+
+    .form-group {
+      margin-bottom: 1rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    button {
+      padding: 0.75rem 1.5rem;
+      background: var(--accent);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 20px var(--accent-glow);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    button.secondary {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+    }
+
+    .status {
+      margin-top: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      display: none;
+    }
+
+    .status.show {
+      display: block;
+    }
+
+    .status.success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid var(--success);
+      color: var(--success);
+    }
+
+    .status.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--error);
+      color: var(--error);
+    }
+
+    .status.loading {
+      background: rgba(124, 92, 255, 0.1);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+
+    /* Results section */
+    .results {
+      margin-top: 2rem;
+    }
+
+    .results h3 {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .result-meta {
+      display: flex;
+      gap: 1.5rem;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .result-meta span {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ranges-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .range-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+
+    .range-item:hover {
+      background: var(--bg-card);
+    }
+
+    .range-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.9rem;
+      color: var(--accent);
+      min-width: 140px;
+    }
+
+    .range-stats {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .range-play {
+      margin-left: auto;
+      padding: 0.5rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    /* Audio player */
+    .audio-player {
+      margin-top: 1.5rem;
+      padding: 1rem;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+    }
+
+    .audio-player audio {
+      width: 100%;
+    }
+
+    .audio-player p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    /* Episodes list */
+    .episodes-list {
+      margin-top: 1rem;
+    }
+
+    .episode-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+    }
+
+    .episode-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .episode-title {
+      font-weight: 500;
+    }
+
+    .episode-meta {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-secondary);
+    }
+
+    /* Spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid transparent;
+      border-top-color: currentColor;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 0.5rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>CastCue v2</h1>
+      <p>Find where topics are discussed in podcast episodes</p>
+    </header>
+
+    <div class="grid">
+      <!-- Left column: Ingest -->
+      <div class="card">
+        <h2>Ingest Episode</h2>
+
+        <div class="form-group">
+          <label for="episodeId">Episode ID</label>
+          <input type="text" id="episodeId" placeholder="my-podcast-ep-42">
+        </div>
+
+        <div class="form-group">
+          <label for="episodeTitle">Title</label>
+          <input type="text" id="episodeTitle" placeholder="Episode 42: The Future of AI">
+        </div>
+
+        <div class="form-group">
+          <label for="audioUrl">Audio URL</label>
+          <input type="url" id="audioUrl" placeholder="https://example.com/episode.mp3">
+        </div>
+
+        <div class="form-group">
+          <label for="transcript">Transcript JSON (AssemblyAI format with words array)</label>
+          <textarea id="transcript" placeholder='{"words": [{"text": "Hello", "start": 0, "end": 500}, ...]}'></textarea>
+        </div>
+
+        <button id="ingestBtn">Ingest Episode</button>
+        <div id="ingestStatus" class="status"></div>
+
+        <!-- Episodes list -->
+        <div class="episodes-list">
+          <h3 style="margin-top: 1.5rem; margin-bottom: 0.5rem; font-size: 0.9rem; color: var(--text-secondary);">Ingested Episodes</h3>
+          <div id="episodesList"></div>
+        </div>
+      </div>
+
+      <!-- Right column: Search -->
+      <div class="card">
+        <h2>Search Topics</h2>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="searchEpisode">Episode</label>
+            <select id="searchEpisode">
+              <option value="">Select an episode...</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="searchTopic">Topic</label>
+            <input type="text" id="searchTopic" placeholder="e.g., artificial intelligence">
+          </div>
+        </div>
+
+        <button id="searchBtn">Search</button>
+        <div id="searchStatus" class="status"></div>
+
+        <!-- Results -->
+        <div id="searchResults" class="results" style="display: none;">
+          <h3>Results</h3>
+          <div id="resultMeta" class="result-meta"></div>
+          <div id="rangesList" class="ranges-list"></div>
+
+          <div id="audioPlayer" class="audio-player" style="display: none;">
+            <p>Now playing:</p>
+            <audio id="audioElement" controls></audio>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3001';
+
+    // Elements
+    const ingestBtn = document.getElementById('ingestBtn');
+    const ingestStatus = document.getElementById('ingestStatus');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchStatus = document.getElementById('searchStatus');
+    const episodesList = document.getElementById('episodesList');
+    const searchEpisode = document.getElementById('searchEpisode');
+    const searchResults = document.getElementById('searchResults');
+    const resultMeta = document.getElementById('resultMeta');
+    const rangesList = document.getElementById('rangesList');
+    const audioPlayer = document.getElementById('audioPlayer');
+    const audioElement = document.getElementById('audioElement');
+
+    // Show status message
+    function showStatus(el, type, message) {
+      el.className = `status show ${type}`;
+      el.innerHTML = type === 'loading' ? `<span class="spinner"></span>${message}` : message;
+    }
+
+    function hideStatus(el) {
+      el.className = 'status';
+    }
+
+    // Load episodes
+    async function loadEpisodes() {
+      try {
+        const res = await fetch(`${API_BASE}/episodes`);
+        const data = await res.json();
+
+        // Update episodes list
+        if (data.episodes.length === 0) {
+          episodesList.innerHTML = '<div class="empty-state">No episodes yet</div>';
+        } else {
+          episodesList.innerHTML = data.episodes.map(ep => `
+            <div class="episode-item">
+              <div class="episode-info">
+                <span class="episode-title">${ep.title}</span>
+                <span class="episode-meta">${ep.id} • ${ep.segmentCount} segments</span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Update search dropdown
+        searchEpisode.innerHTML = '<option value="">Select an episode...</option>' +
+          data.episodes.map(ep => `<option value="${ep.id}">${ep.title}</option>`).join('');
+
+      } catch (err) {
+        console.error('Failed to load episodes:', err);
+      }
+    }
+
+    // Ingest episode
+    ingestBtn.addEventListener('click', async () => {
+      const episodeId = document.getElementById('episodeId').value.trim();
+      const title = document.getElementById('episodeTitle').value.trim();
+      const audioUrl = document.getElementById('audioUrl').value.trim();
+      const transcriptRaw = document.getElementById('transcript').value.trim();
+
+      if (!episodeId || !title || !audioUrl || !transcriptRaw) {
+        showStatus(ingestStatus, 'error', 'All fields are required');
+        return;
+      }
+
+      let transcript;
+      try {
+        transcript = JSON.parse(transcriptRaw);
+      } catch (e) {
+        showStatus(ingestStatus, 'error', 'Invalid JSON in transcript');
+        return;
+      }
+
+      if (!transcript.words || !Array.isArray(transcript.words)) {
+        showStatus(ingestStatus, 'error', 'Transcript must have a "words" array');
+        return;
+      }
+
+      ingestBtn.disabled = true;
+      showStatus(ingestStatus, 'loading', 'Ingesting episode (this may take a minute)...');
+
+      try {
+        const res = await fetch(`${API_BASE}/episodes/ingest`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ episodeId, title, audioUrl, transcript }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          showStatus(ingestStatus, 'success', `✓ ${data.message}`);
+          loadEpisodes();
+          // Clear form
+          document.getElementById('episodeId').value = '';
+          document.getElementById('episodeTitle').value = '';
+          document.getElementById('audioUrl').value = '';
+          document.getElementById('transcript').value = '';
+        } else {
+          showStatus(ingestStatus, 'error', data.error || 'Ingest failed');
+        }
+      } catch (err) {
+        showStatus(ingestStatus, 'error', 'Network error');
+      } finally {
+        ingestBtn.disabled = false;
+      }
+    });
+
+    // Search
+    searchBtn.addEventListener('click', async () => {
+      const episodeId = searchEpisode.value;
+      const topic = document.getElementById('searchTopic').value.trim();
+
+      if (!episodeId || !topic) {
+        showStatus(searchStatus, 'error', 'Select an episode and enter a topic');
+        return;
+      }
+
+      searchBtn.disabled = true;
+      showStatus(searchStatus, 'loading', 'Searching...');
+      searchResults.style.display = 'none';
+
+      try {
+        const res = await fetch(`${API_BASE}/search?episodeId=${encodeURIComponent(episodeId)}&topic=${encodeURIComponent(topic)}`);
+        const data = await res.json();
+
+        if (!res.ok) {
+          showStatus(searchStatus, 'error', data.error || 'Search failed');
+          return;
+        }
+
+        hideStatus(searchStatus);
+        searchResults.style.display = 'block';
+
+        // Show meta
+        const totalDuration = Math.round(data.totalDurationMs / 1000);
+        resultMeta.innerHTML = `
+          <span>📍 ${data.totalRanges} range${data.totalRanges !== 1 ? 's' : ''}</span>
+          <span>⏱ ${totalDuration}s total</span>
+          <span>🔍 ${data.method} search</span>
+        `;
+
+        // Show ranges
+        if (data.ranges.length === 0) {
+          rangesList.innerHTML = '<div class="empty-state">No discussions found for this topic</div>';
+          audioPlayer.style.display = 'none';
+        } else {
+          rangesList.innerHTML = data.ranges.map((r, i) => `
+            <div class="range-item">
+              <span class="range-time">${r.startFormatted} → ${r.endFormatted}</span>
+              <span class="range-stats">${r.occurrences} hit${r.occurrences !== 1 ? 's' : ''} • ${Math.round(r.durationMs / 1000)}s</span>
+              <button class="range-play" onclick="playRange('${data.audioUrl}', ${r.startMs})">▶ Play</button>
+            </div>
+          `).join('');
+
+          // Setup audio player
+          audioElement.src = data.audioUrl;
+          audioPlayer.style.display = 'block';
+        }
+
+      } catch (err) {
+        showStatus(searchStatus, 'error', 'Network error');
+      } finally {
+        searchBtn.disabled = false;
+      }
+    });
+
+    // Play range
+    function playRange(url, startMs) {
+      audioElement.src = url;
+      audioElement.currentTime = startMs / 1000;
+      audioElement.play();
+    }
+
+    // Initial load
+    loadEpisodes();
+  </script>
+</body>
+</html>
+
