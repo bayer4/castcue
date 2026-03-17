@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MouseEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useGeneration } from "@/components/GenerationContext";
 
 type PlaylistClip = {
   id: number;
@@ -47,8 +48,8 @@ const SparkleIcon = () => (
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { isGenerating, startGeneration, generationRunId } = useGeneration();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [clips, setClips] = useState<PlaylistClip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -84,6 +85,19 @@ function HomeContent() {
     })();
     return () => { active = false; };
   }, [loadPlaylist]);
+
+  useEffect(() => {
+    if (!isGenerating) return;
+    const intervalId = window.setInterval(() => {
+      void loadPlaylist();
+    }, 5000);
+    return () => window.clearInterval(intervalId);
+  }, [isGenerating, loadPlaylist]);
+
+  useEffect(() => {
+    if (loading) return;
+    void loadPlaylist();
+  }, [generationRunId, loadPlaylist, loading]);
 
   const currentIndex = useMemo(
     () => clips.findIndex((clip) => clip.id === currentClipId),
@@ -283,15 +297,8 @@ function HomeContent() {
   }, [currentClip, isPlaying]);
 
   async function handleGenerateClips() {
-    setGenerating(true);
     setMessage(null);
-    const response = await fetch("/api/playlist/generate", { method: "POST" });
-    if (response.status === 401) { router.push("/login"); setGenerating(false); return; }
-    const payload = (await response.json()) as { createdCount?: number; scannedEpisodes?: number; scannedTopics?: number; error?: string };
-    if (!response.ok) { setMessage(payload.error ?? "Failed to generate clips."); setGenerating(false); return; }
-    setMessage(`Found ${payload.createdCount ?? 0} conversations across ${payload.scannedEpisodes ?? 0} episodes.`);
-    await loadPlaylist();
-    setGenerating(false);
+    startGeneration();
   }
 
   async function handleClearClips() {
@@ -363,12 +370,19 @@ function HomeContent() {
               Clear
             </button>
           )}
-          <button onClick={handleGenerateClips} disabled={generating} className="btn-primary">
+          <button onClick={handleGenerateClips} disabled={isGenerating} className="btn-primary">
             <SparkleIcon />
-            {generating ? "Scanning..." : "Generate"}
+            {isGenerating ? "Scanning..." : "Generate"}
           </button>
         </div>
       </header>
+
+      {isGenerating ? (
+        <div className="mb-4 flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+          <span className="animate-pulse">Scanning your podcasts...</span>
+        </div>
+      ) : null}
 
       {/* Status message */}
       {message && (

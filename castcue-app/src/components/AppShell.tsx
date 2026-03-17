@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { GenerationProvider, useGeneration } from "@/components/GenerationContext";
 
 const navItems = [
   {
@@ -45,10 +46,20 @@ const navItems = [
 const authRoutes = new Set(["/login", "/signup"]);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  return (
+    <GenerationProvider>
+      <AppShellContent>{children}</AppShellContent>
+    </GenerationProvider>
+  );
+}
+
+function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { isGenerating, statusMessage, startGeneration } = useGeneration();
 
   const isAuthRoute = authRoutes.has(pathname);
+  const showGlobalGenerateButton = pathname !== "/";
 
   async function handleLogout() {
     const supabase = createClient();
@@ -80,6 +91,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <p className="mt-1.5 text-[11px] font-medium uppercase tracking-widest text-[var(--text-tertiary)]">
             Conversations that matter
           </p>
+          {isGenerating ? (
+            <div className="mt-3 flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--elevated)] px-2 py-1.5 text-[11px] text-[var(--text-secondary)]">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
+              <span>Scanning podcasts...</span>
+            </div>
+          ) : null}
         </div>
 
         {/* Nav */}
@@ -117,6 +134,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 overflow-y-auto p-5 md:p-8">
+        {showGlobalGenerateButton ? (
+          <div className="mb-4 flex justify-end">
+            <button
+              onClick={startGeneration}
+              disabled={isGenerating}
+              className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] disabled:cursor-default disabled:opacity-70"
+            >
+              {isGenerating ? (
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+              ) : (
+                <span className="h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
+              )}
+              {isGenerating ? "Scanning..." : "Generate Clips"}
+            </button>
+          </div>
+        ) : null}
+        {statusMessage ? (
+          <div
+            className={`mb-4 flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-secondary)] ${
+              isGenerating ? "animate-pulse" : ""
+            }`}
+          >
+            {isGenerating ? (
+              <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+            ) : (
+              <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
+            )}
+            <span>{statusMessage}</span>
+          </div>
+        ) : null}
         {children}
       </main>
     </div>
