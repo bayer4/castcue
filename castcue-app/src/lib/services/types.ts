@@ -106,8 +106,8 @@ export const SEARCH_CONFIG = {
   Z_SCORE_THRESHOLD: 0.5, // Segment must be 0.5 std dev above mean
 
   // Context padding
-  CONTEXT_SEGMENTS_BEFORE: 3, // Include N segments before hit for context
-  LEAD_PAD_MS: 30000, // 30s lead-in padding
+  CONTEXT_SEGMENTS_BEFORE: 1, // Include N segments before hit for context
+  LEAD_PAD_MS: 10000, // 10s lead-in padding
   TRAIL_PAD_MS: 10000, // 10s trail-out padding
 
   // Result filtering
