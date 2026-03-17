@@ -94,6 +94,7 @@ export default function PodcastsPage() {
   const [loading, setLoading] = useState(true);
   const [busyRssUrl, setBusyRssUrl] = useState<string | null>(null);
   const [optimisticFollows, setOptimisticFollows] = useState<Set<string>>(new Set());
+  const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -112,14 +113,11 @@ export default function PodcastsPage() {
   }, [router]);
 
   async function loadPodcasts() {
-    setLoading(true);
     setError(null);
     try {
       setPodcasts(await fetchPodcasts());
     } catch {
       setError("Failed to load podcasts");
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -186,18 +184,24 @@ export default function PodcastsPage() {
   }
 
   async function processEpisodes(podcastId?: string) {
+    const key = podcastId ?? "_all";
+    setProcessingIds((prev) => new Set(prev).add(key));
     setError(null);
-    const response = await fetch("/api/episodes/ingest", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(podcastId ? { podcastId } : {}),
-    });
-    if (!response.ok) {
-      const payload = (await response.json()) as { error?: string };
-      setError(payload.error ?? "Could not process episodes");
-      return;
+    try {
+      const response = await fetch("/api/episodes/ingest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(podcastId ? { podcastId } : {}),
+      });
+      if (!response.ok) {
+        const payload = (await response.json()) as { error?: string };
+        setError(payload.error ?? "Could not process episodes");
+        return;
+      }
+      await loadPodcasts();
+    } finally {
+      setProcessingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
     }
-    await loadPodcasts();
   }
 
   useEffect(() => {
@@ -311,7 +315,7 @@ export default function PodcastsPage() {
                     <div className="mr-3 flex min-w-0 items-center gap-3">
                       <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--surface)]">
                         {result.artworkUrl100 ? (
-                          <Image src={result.artworkUrl100} alt={result.collectionName} fill className="object-cover" />
+                          <Image src={result.artworkUrl100} alt={result.collectionName} fill className="object-cover" sizes="48px" />
                         ) : null}
                       </div>
                       <div className="min-w-0">
@@ -341,9 +345,10 @@ export default function PodcastsPage() {
           <h3 className="text-lg font-semibold">Suggested</h3>
           <button
             onClick={() => processEpisodes()}
-            className="btn-ghost"
+            disabled={processingIds.has("_all")}
+            className="btn-ghost disabled:opacity-50"
           >
-            Process All Pending
+            {processingIds.has("_all") ? "Processing..." : "Process All Pending"}
           </button>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -357,7 +362,7 @@ export default function PodcastsPage() {
               >
                 <div className="mb-3 flex items-center gap-3">
                   <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-[var(--elevated)]">
-                    <Image src={podcast.imageUrl} alt={podcast.title} fill className="object-cover" />
+                    <Image src={podcast.imageUrl} alt={podcast.title} fill className="object-cover" sizes="64px" />
                   </div>
                   <div className="min-w-0">
                     <p className="line-clamp-2 text-sm font-semibold">{podcast.title}</p>
@@ -403,7 +408,7 @@ export default function PodcastsPage() {
               <div className="flex items-center gap-3">
                 <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-[var(--elevated)]">
                   {podcast.image_url ? (
-                    <Image src={podcast.image_url} alt="" fill className="object-cover" />
+                    <Image src={podcast.image_url} alt="" fill className="object-cover" sizes="48px" />
                   ) : null}
                 </div>
                 <div className="min-w-0">
@@ -420,9 +425,10 @@ export default function PodcastsPage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => processEpisodes(podcast.id)}
-                  className="btn-ghost px-3 py-1.5 text-xs"
+                  disabled={processingIds.has(podcast.id) || processingIds.has("_all")}
+                  className="btn-ghost px-3 py-1.5 text-xs disabled:opacity-50"
                 >
-                  Process Episodes
+                  {processingIds.has(podcast.id) || processingIds.has("_all") ? "Processing..." : "Process Episodes"}
                 </button>
                 <button
                   onClick={() => unsubscribe(podcast.id)}
