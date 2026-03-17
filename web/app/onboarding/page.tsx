@@ -126,7 +126,7 @@ export default function OnboardingPage() {
       // Remove from search results
       setSearchResults((prev) => prev.filter((r) => r.podcastId !== result.podcastId));
     } catch (err) {
-      console.error('Failed to subscribe:', err);
+      console.error('Failed to follow:', err);
     } finally {
       setSubscribingIds((prev) => {
         const next = new Set(prev);
@@ -168,7 +168,7 @@ export default function OnboardingPage() {
     }
   };
 
-  // Check if podcast is already subscribed
+  // Check if podcast is already followed
   const isSubscribed = (feedUrl: string) => {
     return podcastList.some((p) => p.rssUrl === feedUrl);
   };
@@ -271,7 +271,7 @@ export default function OnboardingPage() {
               Add your podcasts
             </h2>
             <p className="text-text-secondary text-sm mb-6">
-              Search for podcasts to subscribe to.
+              Search for podcasts to follow.
             </p>
 
             {/* Search input */}

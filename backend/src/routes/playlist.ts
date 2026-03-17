@@ -37,7 +37,7 @@ router.post('/generate', async (req, res) => {
       });
     }
 
-    // 2. Get episodes from user's subscribed podcasts
+    // 2. Get episodes from user's followed podcasts
     const episodesResult = await query<{
       id: string;
       title: string;
@@ -58,7 +58,7 @@ router.post('/generate', async (req, res) => {
         updatedCount: 0,
         scannedEpisodes: 0,
         scannedTopics: topics.length,
-        message: 'No episodes found from subscribed podcasts.',
+        message: 'No episodes found from followed podcasts.',
       });
     }
 
@@ -117,7 +117,7 @@ router.get('/', async (req, res) => {
   try {
     const userId = req.userId!;
 
-    // Get clips for user's subscribed podcasts, with listen status
+    // Get clips for user's followed podcasts, with listen status
     const result = await query<{
       clip_id: number;
       topic: string;

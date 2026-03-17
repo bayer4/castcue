@@ -55,6 +55,7 @@ export default function Home() {
   const [currentClipId, setCurrentClipId] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [clipProgressMs, setClipProgressMs] = useState(0);
+  const [activeTopicFilter, setActiveTopicFilter] = useState<string>("All");
 
   const loadPlaylist = useCallback(async () => {
     const response = await fetch("/api/playlist");
@@ -89,6 +90,25 @@ export default function Home() {
     [clips, currentClipId],
   );
   const currentClip = currentIndex >= 0 ? clips[currentIndex] : null;
+  const topicFilters = useMemo(
+    () => ["All", ...Array.from(new Set(clips.map((clip) => clip.topic)))],
+    [clips],
+  );
+  const visibleClips = useMemo(
+    () =>
+      activeTopicFilter === "All"
+        ? clips
+        : clips.filter((clip) => clip.topic === activeTopicFilter),
+    [activeTopicFilter, clips],
+  );
+  const visibleIndex = useMemo(
+    () => visibleClips.findIndex((clip) => clip.id === currentClipId),
+    [visibleClips, currentClipId],
+  );
+  const totalDurationMs = useMemo(
+    () => visibleClips.reduce((sum, c) => sum + Math.max(0, c.endMs - c.startMs), 0),
+    [visibleClips],
+  );
 
   async function markAsListened(clipId: number) {
     setClips((prev) => prev.map((clip) => (clip.id === clipId ? { ...clip, listened: true } : clip)));
@@ -148,16 +168,20 @@ export default function Home() {
   );
 
   const playNextClip = useCallback(async () => {
-    if (currentIndex < 0) return;
-    const nextIndex = currentIndex + 1;
-    if (nextIndex >= clips.length) {
+    if (visibleIndex < 0) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      return;
+    }
+    const nextIndex = visibleIndex + 1;
+    if (nextIndex >= visibleClips.length) {
       audioRef.current?.pause();
       setIsPlaying(false);
       if (currentClip) setClipProgressMs(Math.max(0, currentClip.endMs - currentClip.startMs));
       return;
     }
-    await playClip(clips[nextIndex].id);
-  }, [clips, currentClip, currentIndex, playClip]);
+    await playClip(visibleClips[nextIndex].id);
+  }, [visibleClips, visibleIndex, currentClip, playClip]);
 
   function seekWithinCurrentClip(event: MouseEvent<HTMLDivElement>) {
     if (!currentClip || !audioRef.current) return;
@@ -231,6 +255,33 @@ export default function Home() {
     };
   }, [currentClip, playNextClip]);
 
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      const audio = audioRef.current;
+      if (!audio || !currentClip) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (isPlaying) audio.pause(); else void audio.play();
+      } else if (e.code === "ArrowRight") {
+        e.preventDefault();
+        const maxSec = currentClip.endMs / 1000;
+        audio.currentTime = Math.min(maxSec, audio.currentTime + 5);
+        setClipProgressMs(Math.max(0, audio.currentTime * 1000 - currentClip.startMs));
+      } else if (e.code === "ArrowLeft") {
+        e.preventDefault();
+        const minSec = currentClip.startMs / 1000;
+        audio.currentTime = Math.max(minSec, audio.currentTime - 5);
+        setClipProgressMs(Math.max(0, audio.currentTime * 1000 - currentClip.startMs));
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [currentClip, isPlaying]);
+
   async function handleGenerateClips() {
     setGenerating(true);
     setMessage(null);
@@ -260,6 +311,39 @@ export default function Home() {
   const clipDurationMs = currentClip ? Math.max(1, currentClip.endMs - currentClip.startMs) : 1;
   const progressPct = currentClip ? Math.min(100, (clipProgressMs / clipDurationMs) * 100) : 0;
   const isDebugMode = searchParams.get("debug") === "true";
+  const isPlayingVisible = visibleClips.some((c) => c.id === currentClipId) && isPlaying;
+
+  function formatTotalDuration(ms: number) {
+    const totalMin = Math.max(1, Math.round(ms / 60000));
+    if (totalMin < 60) return `${totalMin}min`;
+    const hrs = Math.floor(totalMin / 60);
+    const mins = totalMin % 60;
+    return mins > 0 ? `${hrs}hr ${mins}min` : `${hrs}hr`;
+  }
+
+  async function handlePlayAll() {
+    const audio = audioRef.current;
+    if (!audio || visibleClips.length === 0) return;
+
+    const currentIsVisible = visibleClips.some((c) => c.id === currentClipId);
+
+    if (currentIsVisible) {
+      if (isPlaying) {
+        audio.pause();
+        setIsPlaying(false);
+      } else {
+        try {
+          await audio.play();
+          setIsPlaying(true);
+        } catch {
+          setMessage("Audio playback was blocked.");
+        }
+      }
+      return;
+    }
+
+    await playClip(visibleClips[0].id);
+  }
 
   return (
     <section className="mx-auto max-w-4xl pb-32">
@@ -312,14 +396,56 @@ export default function Home() {
           </div>
           <h3 className="text-lg font-semibold">No conversations yet</h3>
           <p className="mt-1 max-w-sm text-sm text-[var(--text-tertiary)]">
-            Add topics you care about, subscribe to podcasts, then hit Generate to find conversations.
+            Add topics you care about, follow podcasts, then hit Generate to find conversations.
           </p>
+        </div>
+      )}
+
+      {/* Topic filters */}
+      {!loading && clips.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {topicFilters.map((topic) => {
+            const isActive = topic === activeTopicFilter;
+            return (
+              <button
+                key={topic}
+                onClick={() => setActiveTopicFilter(topic)}
+                className="topic-pill transition"
+                style={
+                  isActive
+                    ? { background: "var(--accent)", color: "#fff" }
+                    : undefined
+                }
+              >
+                {topic}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Play All */}
+      {!loading && visibleClips.length > 0 && (
+        <div className="mb-5 flex items-center gap-4">
+          <button
+            onClick={handlePlayAll}
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--accent)] text-white transition hover:scale-105 hover:bg-[var(--accent-hover)]"
+            style={{ boxShadow: "0 4px 24px rgba(249,115,22,0.25)" }}
+          >
+            {isPlayingVisible ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
+          </button>
+          <div>
+            <p className="text-base font-semibold">Play All</p>
+            <p className="text-sm text-[var(--text-tertiary)]">
+              {visibleClips.length} conversation{visibleClips.length !== 1 ? "s" : ""} · {formatTotalDuration(totalDurationMs)}
+            </p>
+          </div>
         </div>
       )}
 
       {/* Clip list */}
       <div className="space-y-2">
-        {clips.map((clip, i) => {
+        {visibleClips.map((clip, i) => {
           const isActive = currentClipId === clip.id;
           const isClipPlaying = isActive && isPlaying;
           const durationSec = Math.max(1, Math.round((clip.endMs - clip.startMs) / 1000));
@@ -328,12 +454,25 @@ export default function Home() {
           return (
             <article
               key={clip.id}
-              className={`clip-card flex items-center gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 ${isActive ? "clip-card--active" : ""}`}
+              className={`clip-card flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 ${isActive ? "clip-card--active" : ""}`}
               style={{ animationDelay: `${i * 30}ms` }}
               onClick={() => toggleClip(clip)}
               role="button"
               tabIndex={0}
             >
+              {/* Track number */}
+              <div className="flex w-6 shrink-0 items-center justify-center">
+                {isClipPlaying ? (
+                  <div className="equalizer">
+                    <span /><span /><span />
+                  </div>
+                ) : (
+                  <span className={`text-sm tabular-nums ${isActive ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}>
+                    {i + 1}
+                  </span>
+                )}
+              </div>
+
               {/* Artwork */}
               <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[var(--elevated)]">
                 {clip.artworkUrl ? (
@@ -377,6 +516,12 @@ export default function Home() {
           );
         })}
       </div>
+
+      {!loading && clips.length > 0 && visibleClips.length === 0 && (
+        <div className="mt-6 rounded-xl border border-dashed border-[var(--border)] py-12 text-center text-sm text-[var(--text-tertiary)]">
+          No clips for this topic yet.
+        </div>
+      )}
 
       {/* Hidden audio */}
       <audio ref={audioRef} preload="metadata" className="hidden" />

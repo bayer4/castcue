@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type Podcast = {
   id: string;
@@ -15,6 +15,14 @@ type Podcast = {
   processingCount: number;
   pendingCount: number;
   failedCount: number;
+};
+
+type ItunesPodcastResult = {
+  trackId: number;
+  collectionName: string;
+  artistName: string;
+  artworkUrl100?: string;
+  feedUrl?: string;
 };
 
 const popularPodcasts = [
@@ -83,11 +91,15 @@ const popularPodcasts = [
 export default function PodcastsPage() {
   const router = useRouter();
   const [podcasts, setPodcasts] = useState<Podcast[]>([]);
-  const [rssUrl, setRssUrl] = useState("");
   const [loading, setLoading] = useState(true);
-  const [subscribing, setSubscribing] = useState(false);
   const [busyRssUrl, setBusyRssUrl] = useState<string | null>(null);
+  const [optimisticFollows, setOptimisticFollows] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<ItunesPodcastResult[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const fetchPodcasts = useCallback(async () => {
     const response = await fetch("/api/podcasts");
@@ -130,36 +142,6 @@ export default function PodcastsPage() {
     };
   }, [fetchPodcasts]);
 
-  async function subscribe(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!rssUrl.trim()) return;
-
-    setSubscribing(true);
-    setError(null);
-
-    const response = await fetch("/api/podcasts/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rssUrl: rssUrl.trim() }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 401) {
-        router.push("/login");
-        setSubscribing(false);
-        return;
-      }
-      const payload = (await response.json()) as { error?: string };
-      setError(payload.error ?? "Could not subscribe");
-      setSubscribing(false);
-      return;
-    }
-
-    setRssUrl("");
-    setSubscribing(false);
-    await loadPodcasts();
-  }
-
   async function unsubscribe(id: string) {
     const response = await fetch(`/api/podcasts/${id}`, { method: "DELETE" });
     if (!response.ok) {
@@ -167,7 +149,7 @@ export default function PodcastsPage() {
         router.push("/login");
         return;
       }
-      setError("Could not unsubscribe");
+      setError("Could not unfollow");
       return;
     }
     await loadPodcasts();
@@ -175,6 +157,7 @@ export default function PodcastsPage() {
 
   async function subscribeByRssUrl(targetRssUrl: string) {
     setBusyRssUrl(targetRssUrl);
+    setOptimisticFollows((prev) => new Set(prev).add(targetRssUrl));
     setError(null);
 
     const response = await fetch("/api/podcasts/subscribe", {
@@ -187,16 +170,19 @@ export default function PodcastsPage() {
       if (response.status === 401) {
         router.push("/login");
         setBusyRssUrl(null);
+        setOptimisticFollows((prev) => { const next = new Set(prev); next.delete(targetRssUrl); return next; });
         return;
       }
       const payload = (await response.json()) as { error?: string };
-      setError(payload.error ?? "Could not subscribe");
+      setError(payload.error ?? "Could not follow");
       setBusyRssUrl(null);
+      setOptimisticFollows((prev) => { const next = new Set(prev); next.delete(targetRssUrl); return next; });
       return;
     }
 
     setBusyRssUrl(null);
     await loadPodcasts();
+    setOptimisticFollows((prev) => { const next = new Set(prev); next.delete(targetRssUrl); return next; });
   }
 
   async function processEpisodes(podcastId?: string) {
@@ -214,20 +200,145 @@ export default function PodcastsPage() {
     await loadPodcasts();
   }
 
-  const subscribedSet = new Set(podcasts.map((podcast) => podcast.rss_url));
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setDebouncedQuery(searchQuery.trim());
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (debouncedQuery.length < 3) {
+      setSearchResults([]);
+      setSearchError(null);
+      setSearching(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    let cancelled = false;
+
+    (async () => {
+      setSearching(true);
+      setSearchError(null);
+
+      try {
+        const response = await fetch(
+          `https://itunes.apple.com/search?term=${encodeURIComponent(debouncedQuery)}&media=podcast&limit=8`,
+          { signal: controller.signal },
+        );
+        if (!response.ok) throw new Error("Search failed");
+
+        const payload = (await response.json()) as { results?: ItunesPodcastResult[] };
+        if (!cancelled) {
+          setSearchResults(
+            (payload.results ?? []).filter((result) => Boolean(result.feedUrl)),
+          );
+        }
+      } catch (fetchError) {
+        if (!cancelled && !(fetchError instanceof DOMException && fetchError.name === "AbortError")) {
+          setSearchError("Could not search podcasts right now.");
+          setSearchResults([]);
+        }
+      } finally {
+        if (!cancelled) setSearching(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [debouncedQuery]);
+
+  const subscribedSet = new Set([
+    ...podcasts.map((podcast) => podcast.rss_url),
+    ...optimisticFollows,
+  ]);
 
   return (
     <section className="mx-auto max-w-5xl pb-8">
       <header className="mb-6">
         <h2 className="text-2xl font-bold tracking-tight">Podcasts</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-          Subscribe to podcasts to start finding conversations.
+          Follow podcasts to start finding conversations.
         </p>
       </header>
 
+      <section className="mb-8 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-5">
+        <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
+          Search Podcasts
+        </p>
+        <h3 className="text-xl font-semibold tracking-tight">Find podcasts by name</h3>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">Search Apple Podcasts and follow in one click.</p>
+        <div className="mt-4 flex gap-2">
+          <input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Type podcast name (min 3 characters)"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--elevated)] px-4 py-3 text-base text-[var(--text-primary)] outline-none ring-[var(--accent)] transition focus:ring-1"
+          />
+        </div>
+        <p className="mt-2 text-xs text-[var(--text-tertiary)]">
+          Results come from Apple Podcasts.
+        </p>
+
+        {searchError ? (
+          <p className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {searchError}
+          </p>
+        ) : null}
+
+        {debouncedQuery.length >= 3 && (
+          <div className="mt-4 space-y-2">
+            {searching ? (
+              <div className="flex items-center justify-center py-6">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+              </div>
+            ) : searchResults.length === 0 ? (
+              <p className="text-sm text-[var(--text-tertiary)]">No matching podcasts found.</p>
+            ) : (
+              searchResults.map((result) => {
+                const feedUrl = result.feedUrl ?? "";
+                const subscribed = subscribedSet.has(feedUrl);
+                const busy = busyRssUrl === feedUrl;
+
+                return (
+                  <article
+                    key={result.trackId}
+                    className="clip-card flex items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--elevated)] p-3"
+                  >
+                    <div className="mr-3 flex min-w-0 items-center gap-3">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--surface)]">
+                        {result.artworkUrl100 ? (
+                          <Image src={result.artworkUrl100} alt={result.collectionName} fill className="object-cover" />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{result.collectionName}</p>
+                        <p className="truncate text-xs text-[var(--text-tertiary)]">{result.artistName}</p>
+                      </div>
+                    </div>
+                    <button
+                      disabled={busy || subscribed || !feedUrl}
+                      onClick={() => {
+                        if (feedUrl) void subscribeByRssUrl(feedUrl);
+                      }}
+                      className={`shrink-0 ${subscribed ? "btn-ghost" : "btn-primary"} disabled:opacity-50`}
+                    >
+                      {subscribed ? "Following" : busy ? "Following..." : "Follow"}
+                    </button>
+                  </article>
+                );
+              })
+            )}
+          </div>
+        )}
+      </section>
+
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Popular Podcasts</h3>
+          <h3 className="text-lg font-semibold">Suggested</h3>
           <button
             onClick={() => processEpisodes()}
             className="btn-ghost"
@@ -253,38 +364,20 @@ export default function PodcastsPage() {
                     <p className="mt-1 text-xs text-[var(--text-tertiary)]">Curated source</p>
                   </div>
                 </div>
-                <button
-                  disabled={busy || subscribed}
-                  onClick={() => subscribeByRssUrl(podcast.rssUrl)}
-                  className={`w-full ${subscribed ? "btn-ghost" : "btn-primary"} justify-center disabled:opacity-50`}
-                >
-                  {subscribed ? "Subscribed" : busy ? "Subscribing..." : "Subscribe"}
-                </button>
+                {!loading && (
+                  <button
+                    disabled={busy || subscribed}
+                    onClick={() => subscribeByRssUrl(podcast.rssUrl)}
+                    className={`w-full ${subscribed ? "btn-ghost" : "btn-primary"} justify-center disabled:opacity-50`}
+                  >
+                    {subscribed ? "Following" : busy ? "Following..." : "Follow"}
+                  </button>
+                )}
               </article>
             );
           })}
         </div>
       </section>
-
-      <form onSubmit={subscribe} className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
-        <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
-          Manual RSS (optional)
-        </p>
-        <div className="flex gap-2">
-          <input
-            value={rssUrl}
-            onChange={(e) => setRssUrl(e.target.value)}
-            placeholder="Paste a custom podcast RSS URL"
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none ring-[var(--accent)] transition focus:ring-1"
-          />
-          <button
-            disabled={subscribing}
-            className="btn-primary disabled:opacity-50"
-          >
-            {subscribing ? "Adding..." : "Add"}
-          </button>
-        </div>
-      </form>
 
       {error ? (
         <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
@@ -298,7 +391,7 @@ export default function PodcastsPage() {
         </div>
       ) : podcasts.length === 0 ? (
         <div className="animate-fade-in rounded-xl border border-dashed border-[var(--border)] py-16 text-center text-[var(--text-secondary)]">
-          Subscribe to podcasts to start finding conversations.
+          Follow podcasts to start finding conversations.
         </div>
       ) : (
         <div className="space-y-3">
@@ -335,7 +428,7 @@ export default function PodcastsPage() {
                   onClick={() => unsubscribe(podcast.id)}
                   className="btn-ghost px-3 py-1.5 text-xs"
                 >
-                  Unsubscribe
+                  Unfollow
                 </button>
               </div>
             </article>

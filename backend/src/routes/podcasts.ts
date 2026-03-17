@@ -1,6 +1,6 @@
 // ============================================================
 // Podcasts Routes
-// Subscribe/unsubscribe to podcast RSS feeds
+// Follow/unfollow podcast RSS feeds
 // Search via iTunes API
 // ============================================================
 
@@ -78,7 +78,7 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// GET /podcasts - List user's subscribed podcasts
+// GET /podcasts - List user's followed podcasts
 router.get('/', async (req, res) => {
   try {
     const result = await query<PodcastRow>(
@@ -106,7 +106,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST /podcasts/subscribe - Subscribe to a podcast
+// POST /podcasts/subscribe - Follow a podcast
 // Accepts either { rssUrl } or { feedUrl } (or both, feedUrl takes priority)
 router.post('/subscribe', async (req, res) => {
   const { rssUrl, feedUrl, title, imageUrl } = req.body;
@@ -187,12 +187,12 @@ router.post('/subscribe', async (req, res) => {
       },
     });
   } catch (err) {
-    console.error('Error subscribing to podcast:', err);
-    res.status(500).json({ error: 'Failed to subscribe' });
+    console.error('Error following podcast:', err);
+    res.status(500).json({ error: 'Failed to follow' });
   }
 });
 
-// DELETE /podcasts/:id/unsubscribe - Unsubscribe from a podcast
+// DELETE /podcasts/:id/unsubscribe - Unfollow a podcast
 router.delete('/:id/unsubscribe', async (req, res) => {
   const podcastId = req.params.id;
 
@@ -203,13 +203,13 @@ router.delete('/:id/unsubscribe', async (req, res) => {
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ error: 'Subscription not found' });
+      return res.status(404).json({ error: 'Follow not found' });
     }
 
     res.status(204).send();
   } catch (err) {
-    console.error('Error unsubscribing:', err);
-    res.status(500).json({ error: 'Failed to unsubscribe' });
+    console.error('Error unfollowing:', err);
+    res.status(500).json({ error: 'Failed to unfollow' });
   }
 });
 

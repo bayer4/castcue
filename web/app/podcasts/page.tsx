@@ -87,7 +87,7 @@ export default function PodcastsPage() {
       setPodcastList((prev) => [podcast, ...prev]);
       setSearchResults((prev) => prev.filter((r) => r.podcastId !== result.podcastId));
     } catch (err) {
-      console.error('Failed to subscribe:', err);
+      console.error('Failed to follow:', err);
     } finally {
       setSubscribingIds((prev) => {
         const next = new Set(prev);
@@ -123,7 +123,7 @@ export default function PodcastsPage() {
       await podcasts.unsubscribe(id);
       setPodcastList((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      console.error('Failed to unsubscribe:', err);
+      console.error('Failed to unfollow:', err);
     }
   };
 
@@ -266,7 +266,7 @@ export default function PodcastsPage() {
             {rssError && <p className="text-sm text-red-400 mt-2">{rssError}</p>}
           </div>
 
-          {/* Subscribed podcasts */}
+          {/* Followed podcasts */}
           <h2 className="text-sm font-medium text-text-secondary mb-3">Your podcasts</h2>
           {podcastList.length === 0 ? (
             <div className="text-center py-12">
@@ -303,7 +303,7 @@ export default function PodcastsPage() {
                   <button
                     onClick={() => handleUnsubscribe(podcast.id)}
                     className="p-2 text-text-tertiary hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
-                    title="Unsubscribe"
+                    title="Unfollow"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

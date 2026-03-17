@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: subError.message }, { status: 500 });
     }
     if (!subscription) {
-      return NextResponse.json({ error: "Podcast not subscribed" }, { status: 403 });
+      return NextResponse.json({ error: "Podcast not followed" }, { status: 403 });
     }
     podcastIds = [podcastId];
   } else {

@@ -59,7 +59,7 @@ app.listen(PORT, () => {
 ║    POST /user-topics        - Add topic           ║
 ║  Podcasts:                                        ║
 ║    GET  /podcasts/search    - Search iTunes       ║
-║    POST /podcasts/subscribe - Subscribe           ║
+║    POST /podcasts/subscribe - Follow              ║
 ║  Episodes:                                        ║
 ║    POST /episodes/ingest    - Ingest episode      ║
 ║  Playlist:                                        ║
