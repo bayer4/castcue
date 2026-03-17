@@ -30,10 +30,11 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
+  const isPublicRoute = pathname === "/auth/callback";
   const knownAppRoutes = new Set(["/", "/topics", "/podcasts"]);
-  const isKnownRoute = isAuthRoute || knownAppRoutes.has(pathname);
+  const isKnownRoute = isAuthRoute || isPublicRoute || knownAppRoutes.has(pathname);
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isAuthRoute && !isPublicRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
