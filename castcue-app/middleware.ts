@@ -30,6 +30,8 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
   const pathname = request.nextUrl.pathname;
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
+  const knownAppRoutes = new Set(["/", "/topics", "/podcasts"]);
+  const isKnownRoute = isAuthRoute || knownAppRoutes.has(pathname);
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
@@ -38,6 +40,12 @@ export async function middleware(request: NextRequest) {
   }
 
   if (user && isAuthRoute) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  if (user && !isKnownRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: subError.message }, { status: 500 });
   }
 
-  const recentItems = (feed.items ?? []).slice(0, 5);
+  const recentItems = (feed.items ?? []).slice(0, 3);
   const episodeRows = recentItems
     .map((item) => {
       const audioUrl = item.enclosure?.url ?? null;
