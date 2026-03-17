@@ -20,6 +20,30 @@ type PlaylistClip = {
   listened: boolean;
 };
 
+/* ── Icons ── */
+const PlayIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M8 5.14v14.72a1 1 0 001.5.86l12-7.36a1 1 0 000-1.72l-12-7.36A1 1 0 008 5.14z" />
+  </svg>
+);
+const PauseIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <rect x="6" y="4" width="4" height="16" rx="1" />
+    <rect x="14" y="4" width="4" height="16" rx="1" />
+  </svg>
+);
+const SkipIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M5 5.14v14.72a1 1 0 001.5.86l10-7.36a1 1 0 000-1.72l-10-7.36A1 1 0 005 5.14z" />
+    <rect x="18" y="5" width="2" height="14" rx="1" />
+  </svg>
+);
+const SparkleIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z" />
+  </svg>
+);
+
 export default function Home() {
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -37,10 +61,9 @@ export default function Home() {
       router.push("/login");
       throw new Error("Unauthorized");
     }
-
     const payload = (await response.json()) as PlaylistClip[] | { error?: string };
     if (!response.ok) {
-      throw new Error("error" in payload ? payload.error ?? "Failed to load playlist" : "Failed to load playlist");
+      throw new Error("error" in payload ? payload.error ?? "Failed" : "Failed");
     }
     setClips(payload as PlaylistClip[]);
   }, [router]);
@@ -52,16 +75,12 @@ export default function Home() {
         if (!active) return;
         await loadPlaylist();
       } catch (error) {
-        if (active) {
-          setMessage(error instanceof Error ? error.message : "Failed to load playlist");
-        }
+        if (active) setMessage(error instanceof Error ? error.message : "Failed to load playlist");
       } finally {
         if (active) setLoading(false);
       }
     })();
-    return () => {
-      active = false;
-    };
+    return () => { active = false; };
   }, [loadPlaylist]);
 
   const currentIndex = useMemo(
@@ -82,6 +101,13 @@ export default function Home() {
     return `${minutes}:${seconds}`;
   }
 
+  function formatTimestamp(ms: number) {
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = String(totalSec % 60).padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
   const playClip = useCallback(
     async (clipId: number) => {
       const clip = clips.find((entry) => entry.id === clipId);
@@ -93,9 +119,7 @@ export default function Home() {
 
       setCurrentClipId(clip.id);
       setClipProgressMs(0);
-      if (!clip.listened) {
-        void markAsListened(clip.id);
-      }
+      if (!clip.listened) void markAsListened(clip.id);
 
       const startPlayback = async () => {
         audio.currentTime = startSeconds;
@@ -104,7 +128,7 @@ export default function Home() {
           setIsPlaying(true);
         } catch {
           setIsPlaying(false);
-          setMessage("Audio playback was blocked by the browser. Click Play again.");
+          setMessage("Audio playback was blocked. Click Play again.");
         }
       };
 
@@ -128,23 +152,19 @@ export default function Home() {
     if (nextIndex >= clips.length) {
       audioRef.current?.pause();
       setIsPlaying(false);
-      if (currentClip) {
-        setClipProgressMs(Math.max(0, currentClip.endMs - currentClip.startMs));
-      }
+      if (currentClip) setClipProgressMs(Math.max(0, currentClip.endMs - currentClip.startMs));
       return;
     }
     await playClip(clips[nextIndex].id);
   }, [clips, currentClip, currentIndex, playClip]);
 
-  function seekWithinCurrentClip(event: MouseEvent<HTMLButtonElement>) {
+  function seekWithinCurrentClip(event: MouseEvent<HTMLDivElement>) {
     if (!currentClip || !audioRef.current) return;
-
     const rect = event.currentTarget.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const pct = Math.max(0, Math.min(1, x / rect.width));
     const clipDurationMs = Math.max(1, currentClip.endMs - currentClip.startMs);
     const targetMs = currentClip.startMs + pct * clipDurationMs;
-
     audioRef.current.currentTime = targetMs / 1000;
     setClipProgressMs(targetMs - currentClip.startMs);
   }
@@ -152,7 +172,6 @@ export default function Home() {
   async function toggleClip(clip: PlaylistClip) {
     const audio = audioRef.current;
     if (!audio) return;
-
     if (currentClipId === clip.id) {
       if (isPlaying) {
         audio.pause();
@@ -170,30 +189,23 @@ export default function Home() {
       }
       return;
     }
-
     await playClip(clip.id);
   }
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-
     const onTimeUpdate = () => {
       if (!currentClip) return;
       const nowMs = audio.currentTime * 1000;
       const progress = Math.max(0, Math.min(nowMs - currentClip.startMs, currentClip.endMs - currentClip.startMs));
       setClipProgressMs(progress);
-
       if (nowMs >= currentClip.endMs) {
         audio.pause();
         void playNextClip();
       }
     };
-
-    const onEnded = () => {
-      void playNextClip();
-    };
-
+    const onEnded = () => void playNextClip();
     const onPause = () => setIsPlaying(false);
     const onPlay = () => setIsPlaying(true);
 
@@ -201,7 +213,6 @@ export default function Home() {
     audio.addEventListener("ended", onEnded);
     audio.addEventListener("pause", onPause);
     audio.addEventListener("play", onPlay);
-
     return () => {
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("ended", onEnded);
@@ -213,199 +224,209 @@ export default function Home() {
   async function handleGenerateClips() {
     setGenerating(true);
     setMessage(null);
-
     const response = await fetch("/api/playlist/generate", { method: "POST" });
-    if (response.status === 401) {
-      router.push("/login");
-      setGenerating(false);
-      return;
-    }
-
-    const payload = (await response.json()) as {
-      createdCount?: number;
-      scannedEpisodes?: number;
-      scannedTopics?: number;
-      error?: string;
-    };
-
-    if (!response.ok) {
-      setMessage(payload.error ?? "Failed to generate clips.");
-      setGenerating(false);
-      return;
-    }
-
-    setMessage(
-      `Generated ${payload.createdCount ?? 0} clips from ${payload.scannedEpisodes ?? 0} ready episodes across ${
-        payload.scannedTopics ?? 0
-      } topics.`,
-    );
+    if (response.status === 401) { router.push("/login"); setGenerating(false); return; }
+    const payload = (await response.json()) as { createdCount?: number; scannedEpisodes?: number; scannedTopics?: number; error?: string };
+    if (!response.ok) { setMessage(payload.error ?? "Failed to generate clips."); setGenerating(false); return; }
+    setMessage(`Found ${payload.createdCount ?? 0} conversations across ${payload.scannedEpisodes ?? 0} episodes.`);
     await loadPlaylist();
     setGenerating(false);
   }
 
   async function handleClearClips() {
-    const confirmed = window.confirm("Clear all generated clips for your current subscriptions?");
+    const confirmed = window.confirm("Clear all generated clips?");
     if (!confirmed) return;
-
     setMessage(null);
     const response = await fetch("/api/playlist", { method: "DELETE" });
-    if (response.status === 401) {
-      router.push("/login");
-      return;
-    }
-
+    if (response.status === 401) { router.push("/login"); return; }
     const payload = (await response.json()) as { deleted?: number; error?: string };
-    if (!response.ok) {
-      setMessage(payload.error ?? "Failed to clear clips.");
-      return;
-    }
-
-    setMessage(`Cleared ${payload.deleted ?? 0} clips. You can now regenerate.`);
+    if (!response.ok) { setMessage(payload.error ?? "Failed to clear clips."); return; }
+    setMessage(`Cleared ${payload.deleted ?? 0} clips.`);
+    setCurrentClipId(null);
+    setIsPlaying(false);
     await loadPlaylist();
   }
 
+  const clipDurationMs = currentClip ? Math.max(1, currentClip.endMs - currentClip.startMs) : 1;
+  const progressPct = currentClip ? Math.min(100, (clipProgressMs / clipDurationMs) * 100) : 0;
+
   return (
-    <section className="mx-auto max-w-5xl pb-28">
-      <header className="mb-8 flex items-center justify-between">
+    <section className="mx-auto max-w-4xl pb-32">
+      {/* Header */}
+      <header className="mb-6 flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">Playlist</h2>
-          <p className="text-sm text-[var(--text-secondary)]">Your matched conversation clips appear here.</p>
+          <h2 className="text-2xl font-bold tracking-tight">Your Queue</h2>
+          <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+            {clips.length > 0
+              ? `${clips.length} conversation${clips.length !== 1 ? "s" : ""} found`
+              : "Curated conversations from your podcasts"}
+          </p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleClearClips}
-            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)]"
-          >
-            Clear All Clips
-          </button>
-          <button
-            onClick={handleGenerateClips}
-            disabled={generating}
-            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)] disabled:opacity-50"
-          >
-            {generating ? "Generating..." : "Generate Clips"}
+          {clips.length > 0 && (
+            <button onClick={handleClearClips} className="btn-ghost">
+              Clear
+            </button>
+          )}
+          <button onClick={handleGenerateClips} disabled={generating} className="btn-primary">
+            <SparkleIcon />
+            {generating ? "Scanning..." : "Generate"}
           </button>
         </div>
       </header>
 
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center">
-        <p className="text-[var(--text-secondary)]">{message ?? "Click Generate Clips to build your queue."}</p>
-      </div>
+      {/* Status message */}
+      {message && (
+        <div className="animate-fade-in mb-4 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3 text-sm text-[var(--text-secondary)]">
+          {message}
+        </div>
+      )}
 
-      <section className="mt-4 space-y-3">
-        {loading ? <p className="text-sm text-[var(--text-secondary)]">Loading playlist...</p> : null}
-        {!loading && clips.length === 0 ? (
-          <p className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-6 text-sm text-[var(--text-secondary)]">
-            No clips yet. Generate clips to populate your playlist.
+      {/* Loading */}
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && clips.length === 0 && !message && (
+        <div className="animate-fade-in flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] py-20 text-center">
+          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--accent-muted)]">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 18V5l12-3v13" />
+              <circle cx="6" cy="18" r="3" />
+              <circle cx="18" cy="15" r="3" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold">No conversations yet</h3>
+          <p className="mt-1 max-w-sm text-sm text-[var(--text-tertiary)]">
+            Add topics you care about, subscribe to podcasts, then hit Generate to find conversations.
           </p>
-        ) : null}
-        {clips.map((clip) => {
+        </div>
+      )}
+
+      {/* Clip list */}
+      <div className="space-y-2">
+        {clips.map((clip, i) => {
+          const isActive = currentClipId === clip.id;
+          const isClipPlaying = isActive && isPlaying;
           const durationSec = Math.max(1, Math.round((clip.endMs - clip.startMs) / 1000));
-          const startMin = Math.floor(clip.startMs / 60000);
-          const startSec = Math.floor((clip.startMs % 60000) / 1000)
-            .toString()
-            .padStart(2, "0");
+
           return (
             <article
               key={clip.id}
-              className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3"
+              className={`clip-card flex items-center gap-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 ${isActive ? "clip-card--active" : ""}`}
+              style={{ animationDelay: `${i * 30}ms` }}
+              onClick={() => toggleClip(clip)}
+              role="button"
+              tabIndex={0}
             >
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-[var(--elevated)]">
+              {/* Artwork */}
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-[var(--elevated)]">
                 {clip.artworkUrl ? (
-                  <Image src={clip.artworkUrl} alt={clip.podcastTitle} fill className="object-cover" />
-                ) : null}
+                  <Image src={clip.artworkUrl} alt={clip.podcastTitle} fill className="object-cover" sizes="56px" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[var(--text-tertiary)]">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                      <path d="M9 18V5l12-3v13" />
+                      <circle cx="6" cy="18" r="3" />
+                      <circle cx="18" cy="15" r="3" />
+                    </svg>
+                  </div>
+                )}
               </div>
+
+              {/* Info */}
               <div className="min-w-0 flex-1">
                 <div className="mb-1 flex items-center gap-2">
-                  <span className="rounded-full bg-[var(--accent)]/20 px-2 py-0.5 text-xs text-[var(--accent)]">
-                    {clip.topic}
-                  </span>
-                  {!clip.listened ? (
-                    <span className="rounded-full border border-[var(--border)] px-2 py-0.5 text-[10px] text-[var(--text-secondary)]">
-                      NEW
-                    </span>
-                  ) : null}
+                  <span className="topic-pill">{clip.topic}</span>
+                  {!clip.listened && <span className="new-badge">new</span>}
                 </div>
-                <p className="truncate text-sm font-medium">{clip.episodeTitle}</p>
-                <p className="truncate text-xs text-[var(--text-secondary)]">
-                  {clip.podcastTitle} · {startMin}:{startSec} · {durationSec}s
+                <p className="truncate text-[13px] font-semibold leading-tight">{clip.episodeTitle}</p>
+                <p className="mt-0.5 truncate text-[12px] text-[var(--text-tertiary)]">
+                  {clip.podcastTitle} · {formatTimestamp(clip.startMs)} · {durationSec}s
                 </p>
               </div>
+
+              {/* Play button */}
               <button
-                className="rounded-md border border-[var(--border)] px-3 py-1 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)]"
-                onClick={() => toggleClip(clip)}
+                className={`play-btn ${isClipPlaying ? "play-btn--active" : ""}`}
+                onClick={(e) => { e.stopPropagation(); toggleClip(clip); }}
               >
-                {currentClipId === clip.id && isPlaying ? "Pause" : "Play"}
+                {isClipPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
               </button>
             </article>
           );
         })}
-      </section>
+      </div>
 
+      {/* Hidden audio */}
       <audio ref={audioRef} preload="metadata" className="hidden" />
 
-      <div className="fixed inset-x-0 bottom-0 border-t border-[var(--border)] bg-[var(--surface)]">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 p-3">
-          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-[var(--elevated)]">
+      {/* ── Player Bar ── */}
+      <div className="player-bar fixed inset-x-0 bottom-0 z-50">
+        <div className="mx-auto flex max-w-4xl items-center gap-4 px-5 py-3">
+          {/* Artwork */}
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--elevated)]">
             {currentClip?.artworkUrl ? (
-              <Image src={currentClip.artworkUrl} alt={currentClip.podcastTitle} fill className="object-cover" />
-            ) : null}
+              <Image src={currentClip.artworkUrl} alt={currentClip.podcastTitle} fill className="object-cover" sizes="48px" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-[var(--text-tertiary)]">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M9 18V5l12-3v13" />
+                  <circle cx="6" cy="18" r="3" />
+                  <circle cx="18" cy="15" r="3" />
+                </svg>
+              </div>
+            )}
           </div>
 
+          {/* Track info + progress */}
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{currentClip?.episodeTitle ?? "No clip selected"}</p>
-            <p className="truncate text-xs text-[var(--text-secondary)]">
-              {currentClip ? `${currentClip.topic} · ${currentClip.podcastTitle}` : "Select a clip to start listening"}
-            </p>
-            <div className="mt-2 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={seekWithinCurrentClip}
-                disabled={!currentClip}
-                className="group h-3 flex-1 overflow-hidden rounded-full border border-[var(--border)] bg-[var(--background)] disabled:cursor-not-allowed"
-                aria-label="Seek within current clip"
-              >
-                <div
-                  className="relative h-full bg-[var(--accent)] transition-all"
-                  style={{
-                    width: `${
-                      currentClip
-                        ? Math.min(
-                            100,
-                            (clipProgressMs / Math.max(1, currentClip.endMs - currentClip.startMs)) * 100,
-                          )
-                        : 0
-                    }%`,
-                  }}
-                >
-                  <span className="absolute right-0 top-1/2 h-3 w-3 -translate-y-1/2 translate-x-1/2 rounded-full border border-black/40 bg-[var(--accent)] shadow-sm" />
-                </div>
-              </button>
-              <span className="text-[10px] text-[var(--text-secondary)]">
+            <div className="flex items-center justify-between">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium leading-tight">
+                  {currentClip?.episodeTitle ?? "No clip selected"}
+                </p>
+                <p className="truncate text-[11px] text-[var(--text-tertiary)]">
+                  {currentClip
+                    ? `${currentClip.podcastTitle} · ${currentClip.topic}`
+                    : "Select a clip to start listening"}
+                </p>
+              </div>
+              <span className="ml-3 shrink-0 font-mono text-[11px] text-[var(--text-tertiary)]">
                 {currentClip
-                  ? `${formatClock(clipProgressMs)} / ${formatClock(currentClip.endMs - currentClip.startMs)}`
-                  : "0:00 / 0:00"}
+                  ? `${formatClock(clipProgressMs)} / ${formatClock(clipDurationMs)}`
+                  : "—:—"}
               </span>
+            </div>
+
+            {/* Progress bar */}
+            <div
+              className="progress-track mt-2"
+              onClick={currentClip ? seekWithinCurrentClip : undefined}
+            >
+              <div className="progress-fill" style={{ width: `${progressPct}%` }} />
             </div>
           </div>
 
-          <div className="flex gap-2">
+          {/* Controls */}
+          <div className="flex items-center gap-1.5">
             <button
-              onClick={() => {
-                if (!currentClip) return;
-                void toggleClip(currentClip);
-              }}
-              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)]"
+              onClick={() => { if (currentClip) toggleClip(currentClip); }}
               disabled={!currentClip}
+              className="play-btn"
+              style={{ width: 44, height: 44 }}
             >
-              {isPlaying ? "Pause" : "Play"}
+              {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
             </button>
             <button
               onClick={() => void playNextClip()}
-              className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)]"
               disabled={!currentClip}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)] disabled:opacity-30"
             >
-              Next
+              <SkipIcon size={16} />
             </button>
           </div>
         </div>
