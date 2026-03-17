@@ -97,50 +97,74 @@ export default function TopicsPage() {
   }
 
   return (
-    <section className="mx-auto max-w-4xl">
+    <section className="mx-auto max-w-4xl pb-8">
       <header className="mb-6">
-        <h2 className="text-2xl font-semibold">Topics</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
-          Add topics you care about - CastCue will find conversations about them across your podcasts.
+        <h2 className="text-2xl font-bold tracking-tight">Topics</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
+          Add what you care about and CastCue will queue up matching conversations.
         </p>
       </header>
 
-      <form onSubmit={createTopic} className="mb-6 flex gap-2">
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Add topic (e.g., AI agents)"
-          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 outline-none ring-[var(--accent)] focus:ring-1"
-        />
-        <button className="rounded-lg bg-[var(--accent)] px-4 py-2 font-medium text-black">Add</button>
+      <form onSubmit={createTopic} className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
+        <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Add topic</p>
+        <div className="flex gap-2">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. AI agents, NBA playoffs, OpenAI"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none ring-[var(--accent)] transition focus:ring-1"
+          />
+          <button className="btn-primary">Add</button>
+        </div>
       </form>
 
-      {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
+      {error ? (
+        <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          {error}
+        </p>
+      ) : null}
 
       {loading ? (
-        <p className="text-sm text-[var(--text-secondary)]">Loading topics...</p>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+        </div>
       ) : topics.length === 0 ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-secondary)]">
-          Add topics you care about - CastCue will find conversations about them across your podcasts.
+        <div className="animate-fade-in flex flex-col items-center justify-center rounded-xl border border-dashed border-[var(--border)] py-16 text-center">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-[var(--accent-muted)] text-[var(--accent)]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <path d="M12 3v18M3 12h18" strokeLinecap="round" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold">No topics yet</h3>
+          <p className="mt-1 max-w-sm text-sm text-[var(--text-tertiary)]">
+            Add topics to start discovering the exact moments when your podcasts discuss them.
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
           {topics.map((topic) => (
-            <div
+            <article
               key={topic.id}
-              className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-4 py-3"
+              className="clip-card flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3"
             >
               <div>
-                <p className="font-medium">{topic.name}</p>
-                <p className="text-xs text-[var(--text-secondary)]">{topic.clipCount} clips</p>
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="topic-pill">{topic.name}</span>
+                  {topic.clipCount > 0 && <span className="new-badge">{topic.clipCount} clips</span>}
+                </div>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  {topic.clipCount === 0
+                    ? "No clips yet"
+                    : `${topic.clipCount} conversation${topic.clipCount === 1 ? "" : "s"} found`}
+                </p>
               </div>
               <button
                 onClick={() => deleteTopic(topic.id)}
-                className="rounded-md border border-[var(--border)] px-2 py-1 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)]"
+                className="btn-ghost px-3 py-1.5 text-xs"
               >
                 Delete
               </button>
-            </div>
+            </article>
           ))}
         </div>
       )}

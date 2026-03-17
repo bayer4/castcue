@@ -217,20 +217,20 @@ export default function PodcastsPage() {
   const subscribedSet = new Set(podcasts.map((podcast) => podcast.rss_url));
 
   return (
-    <section className="mx-auto max-w-5xl">
+    <section className="mx-auto max-w-5xl pb-8">
       <header className="mb-6">
-        <h2 className="text-2xl font-semibold">Podcasts</h2>
-        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+        <h2 className="text-2xl font-bold tracking-tight">Podcasts</h2>
+        <p className="mt-1 text-sm text-[var(--text-tertiary)]">
           Subscribe to podcasts to start finding conversations.
         </p>
       </header>
 
       <section className="mb-8">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-medium">Popular Podcasts</h3>
+          <h3 className="text-lg font-semibold">Popular Podcasts</h3>
           <button
             onClick={() => processEpisodes()}
-            className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)]"
+            className="btn-ghost"
           >
             Process All Pending
           </button>
@@ -242,18 +242,21 @@ export default function PodcastsPage() {
             return (
               <article
                 key={podcast.rssUrl}
-                className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3"
+                className="clip-card rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3"
               >
                 <div className="mb-3 flex items-center gap-3">
-                  <div className="relative h-14 w-14 overflow-hidden rounded-md bg-[var(--elevated)]">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-[var(--elevated)]">
                     <Image src={podcast.imageUrl} alt={podcast.title} fill className="object-cover" />
                   </div>
-                  <p className="line-clamp-2 text-sm font-medium">{podcast.title}</p>
+                  <div className="min-w-0">
+                    <p className="line-clamp-2 text-sm font-semibold">{podcast.title}</p>
+                    <p className="mt-1 text-xs text-[var(--text-tertiary)]">Curated source</p>
+                  </div>
                 </div>
                 <button
                   disabled={busy || subscribed}
                   onClick={() => subscribeByRssUrl(podcast.rssUrl)}
-                  className="w-full rounded-md bg-[var(--accent)] px-3 py-2 text-sm font-medium text-black disabled:opacity-50"
+                  className={`w-full ${subscribed ? "btn-ghost" : "btn-primary"} justify-center disabled:opacity-50`}
                 >
                   {subscribed ? "Subscribed" : busy ? "Subscribing..." : "Subscribe"}
                 </button>
@@ -263,7 +266,7 @@ export default function PodcastsPage() {
         </div>
       </section>
 
-      <form onSubmit={subscribe} className="mb-6 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+      <form onSubmit={subscribe} className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4">
         <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-tertiary)]">
           Manual RSS (optional)
         </p>
@@ -272,23 +275,29 @@ export default function PodcastsPage() {
             value={rssUrl}
             onChange={(e) => setRssUrl(e.target.value)}
             placeholder="Paste a custom podcast RSS URL"
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-3 py-2 text-sm outline-none ring-[var(--accent)] focus:ring-1"
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none ring-[var(--accent)] transition focus:ring-1"
           />
           <button
             disabled={subscribing}
-            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--text-primary)] disabled:opacity-50"
+            className="btn-primary disabled:opacity-50"
           >
             {subscribing ? "Adding..." : "Add"}
           </button>
         </div>
       </form>
 
-      {error ? <p className="mb-4 text-sm text-red-400">{error}</p> : null}
+      {error ? (
+        <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          {error}
+        </p>
+      ) : null}
 
       {loading ? (
-        <p className="text-sm text-[var(--text-secondary)]">Loading podcasts...</p>
+        <div className="flex items-center justify-center py-20">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+        </div>
       ) : podcasts.length === 0 ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-8 text-center text-[var(--text-secondary)]">
+        <div className="animate-fade-in rounded-xl border border-dashed border-[var(--border)] py-16 text-center text-[var(--text-secondary)]">
           Subscribe to podcasts to start finding conversations.
         </div>
       ) : (
@@ -296,32 +305,35 @@ export default function PodcastsPage() {
           {podcasts.map((podcast) => (
             <article
               key={podcast.id}
-              className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4"
+              className="clip-card flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4"
             >
               <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-md bg-[var(--elevated)]">
+                <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-[var(--elevated)]">
                   {podcast.image_url ? (
                     <Image src={podcast.image_url} alt="" fill className="object-cover" />
                   ) : null}
                 </div>
-                <div>
-                  <p className="font-medium">{podcast.title ?? "Untitled podcast"}</p>
-                  <p className="text-xs text-[var(--text-secondary)]">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{podcast.title ?? "Untitled podcast"}</p>
+                  <p className="truncate text-xs text-[var(--text-secondary)]">
                     {podcast.episodeCount} episodes · {podcast.readyCount} ready · {podcast.processingCount} processing
                     · {podcast.pendingCount} pending
                   </p>
+                  {podcast.failedCount > 0 ? (
+                    <p className="mt-1 text-xs text-red-300">{podcast.failedCount} failed</p>
+                  ) : null}
                 </div>
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => processEpisodes(podcast.id)}
-                  className="rounded-md border border-[var(--border)] px-3 py-1 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)]"
+                  className="btn-ghost px-3 py-1.5 text-xs"
                 >
                   Process Episodes
                 </button>
                 <button
                   onClick={() => unsubscribe(podcast.id)}
-                  className="rounded-md border border-[var(--border)] px-3 py-1 text-sm text-[var(--text-secondary)] hover:bg-[var(--elevated)] hover:text-[var(--text-primary)]"
+                  className="btn-ghost px-3 py-1.5 text-xs"
                 >
                   Unsubscribe
                 </button>

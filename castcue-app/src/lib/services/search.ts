@@ -251,6 +251,7 @@ For each segment, respond with ONLY the segment number and YES or NO, one per li
     }
     const text =
       data.content?.[0]?.type === "text" ? data.content[0].text : "";
+    const responseText = text ?? "";
 
     // Parse YES/NO responses
     const verified: Array<{
@@ -262,7 +263,7 @@ For each segment, respond with ONLY the segment number and YES or NO, one per li
 
     for (let i = 0; i < candidateRanges.length; i++) {
       const pattern = new RegExp(`\\[${i}\\]\\s*(YES|NO)`, "i");
-      const match = text.match(pattern);
+      const match = responseText.match(pattern);
       const parsed = match?.[1]?.toUpperCase() ?? "PARSE_MISS";
       const include = !match || parsed === "YES";
       console.log(

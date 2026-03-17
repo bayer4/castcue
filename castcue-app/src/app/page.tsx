@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type PlaylistClip = {
@@ -46,6 +46,7 @@ const SparkleIcon = () => (
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [generating, setGenerating] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -169,6 +170,15 @@ export default function Home() {
     setClipProgressMs(targetMs - currentClip.startMs);
   }
 
+  function skipForward30Seconds() {
+    if (!currentClip || !audioRef.current) return;
+    const audio = audioRef.current;
+    const clipEndSeconds = currentClip.endMs / 1000;
+    const nextTime = Math.min(clipEndSeconds, audio.currentTime + 30);
+    audio.currentTime = nextTime;
+    setClipProgressMs(Math.max(0, nextTime * 1000 - currentClip.startMs));
+  }
+
   async function toggleClip(clip: PlaylistClip) {
     const audio = audioRef.current;
     if (!audio) return;
@@ -249,6 +259,7 @@ export default function Home() {
 
   const clipDurationMs = currentClip ? Math.max(1, currentClip.endMs - currentClip.startMs) : 1;
   const progressPct = currentClip ? Math.min(100, (clipProgressMs / clipDurationMs) * 100) : 0;
+  const isDebugMode = searchParams.get("debug") === "true";
 
   return (
     <section className="mx-auto max-w-4xl pb-32">
@@ -312,6 +323,7 @@ export default function Home() {
           const isActive = currentClipId === clip.id;
           const isClipPlaying = isActive && isPlaying;
           const durationSec = Math.max(1, Math.round((clip.endMs - clip.startMs) / 1000));
+          const relevancePct = Math.max(0, Math.min(99, Math.round(clip.confidence * 200)));
 
           return (
             <article
@@ -347,6 +359,11 @@ export default function Home() {
                 <p className="mt-0.5 truncate text-[12px] text-[var(--text-tertiary)]">
                   {clip.podcastTitle} · {formatTimestamp(clip.startMs)} · {durationSec}s
                 </p>
+                {isDebugMode && (
+                  <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
+                    {relevancePct}% relevance · startMs: {clip.startMs} · endMs: {clip.endMs}
+                  </p>
+                )}
               </div>
 
               {/* Play button */}
@@ -420,6 +437,15 @@ export default function Home() {
               style={{ width: 44, height: 44 }}
             >
               {isPlaying ? <PauseIcon size={18} /> : <PlayIcon size={18} />}
+            </button>
+            <button
+              onClick={skipForward30Seconds}
+              disabled={!currentClip}
+              className="flex h-9 items-center justify-center rounded-full px-2 text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)] disabled:opacity-30"
+              title="Skip forward 30 seconds"
+              aria-label="Skip forward 30 seconds"
+            >
+              ↻30
             </button>
             <button
               onClick={() => void playNextClip()}
