@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { MouseEvent, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type PlaylistClip = {
   id: number;
@@ -44,7 +44,7 @@ const SparkleIcon = () => (
   </svg>
 );
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -603,5 +603,21 @@ export default function Home() {
         </div>
       </div>
     </section>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense
+      fallback={
+        <section className="mx-auto max-w-4xl pb-32">
+          <div className="flex items-center justify-center py-20">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+          </div>
+        </section>
+      }
+    >
+      <HomeContent />
+    </Suspense>
   );
 }
