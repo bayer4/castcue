@@ -199,9 +199,9 @@ async function verifyClipsWithLLM(
     return `[${i}] "${text}"`;
   });
 
-  const prompt = `You are a podcast clip relevance judge. For each transcript segment below, determine if it contains a SUBSTANTIVE discussion about "${topic}". 
+  const prompt = `You are a podcast clip relevance judge. For each transcript segment below, determine if the conversation is PRIMARILY about "${topic}".
 
-A substantive discussion means the topic is a main subject being actively discussed, debated, or explained - not just mentioned in passing, used as a metaphor, or referenced briefly while discussing something else.
+The topic must be a central subject being discussed, not just mentioned by name while the conversation is actually about something else. For example, if the topic is a person's name, the conversation must be focused on that person - not just mentioning them while discussing a team, event, or broader subject. Respond YES only if the topic is clearly a main focus of the conversation.
 
 Segments:
 ${segments.join("\n\n")}
