@@ -84,12 +84,18 @@ function generateAliases(topic: string): string[] {
   const words = normalized.split(/\s+/);
   const aliases = new Set([normalized]);
 
-  for (const word of words) {
-    if (word.length > 2) aliases.add(word);
-  }
-
-  if (words.length > 1) {
-    aliases.add(words.map((w) => w[0]).join(""));
+  if (words.length === 1) {
+    aliases.add(normalized);
+  } else {
+    // For multi-word topics, keep the full phrase as primary alias.
+    // Individual words like "draft" are too generic and cause cross-domain
+    // false positives (e.g. "nba draft" matching NFL draft content).
+    // Only add well-known acronyms (all-caps words already in the topic).
+    for (const word of words) {
+      if (word.length >= 2 && word === word.toUpperCase()) {
+        aliases.add(word.toLowerCase());
+      }
+    }
   }
 
   return [...aliases];
@@ -191,17 +197,20 @@ async function verifyClipsWithLLM(
 
   // Build a single batch prompt for efficiency
   const segments = candidateRanges.map((r, i) => {
-    // Truncate to ~300 chars to keep costs minimal
     const text =
-      r.sampleText.length > 300
-        ? r.sampleText.substring(0, 300) + "..."
+      r.sampleText.length > 600
+        ? r.sampleText.substring(0, 600) + "..."
         : r.sampleText;
     return `[${i}] "${text}"`;
   });
 
   const prompt = `You are a podcast clip relevance judge. For each transcript segment below, determine if the conversation is PRIMARILY about "${topic}".
 
-The topic must be a central subject being discussed, not just mentioned by name while the conversation is actually about something else. For example, if the topic is a person's name, the conversation must be focused on that person - not just mentioning them while discussing a team, event, or broader subject. Respond YES only if the topic is clearly a main focus of the conversation.
+Rules:
+- The topic must be a central subject being discussed, not just mentioned by name.
+- If the topic is a person's name, the conversation must be focused on that person — not just mentioning them while discussing a team, event, or broader subject.
+- Watch out for domain confusion: if the topic specifies a sport or league (e.g. "NBA draft"), content about a DIFFERENT sport or league (e.g. NFL draft) is NOT a match even though they share words like "draft".
+- Respond YES only if the topic is clearly a main focus of the conversation. When in doubt, say NO.
 
 Segments:
 ${segments.join("\n\n")}
@@ -265,13 +274,12 @@ For each segment, respond with ONLY the segment number and YES or NO, one per li
       const pattern = new RegExp(`\\[${i}\\]\\s*(YES|NO)`, "i");
       const match = responseText.match(pattern);
       const parsed = match?.[1]?.toUpperCase() ?? "PARSE_MISS";
-      const include = !match || parsed === "YES";
+      const include = match ? parsed === "YES" : false;
       console.log(
         `[search:v3][llm] topic="${topic}" segment=${i} parsed=${parsed} include=${include}`
       );
 
-      if (!match || match[1].toUpperCase() === "YES") {
-        // If we can't parse the response for this segment, include it (safe default)
+      if (include) {
         verified.push({
           startMs: candidateRanges[i].startMs,
           endMs: candidateRanges[i].endMs,
