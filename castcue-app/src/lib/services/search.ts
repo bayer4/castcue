@@ -611,7 +611,8 @@ SUMMARY: {one-line summary of what's discussed}`;
 
 async function verifyTopicSegmentsWithLLM(
   topic: string,
-  candidates: TopicSegmentCandidate[]
+  candidates: TopicSegmentCandidate[],
+  episodeSegments: SegmentRow[]
 ): Promise<TopicRange[]> {
   type AnthropicMessageResponse = {
     content?: Array<{ type?: string; text?: string }>;
@@ -627,11 +628,26 @@ async function verifyTopicSegmentsWithLLM(
     }));
   }
 
-  const segments = candidates.map(
-    (candidate, index) =>
-      `[${index}] Label: "${candidate.label}" | Summary: "${candidate.summary}"`
-  );
-  const prompt = `You are a podcast topic relevance judge. For each segment below, determine if it is specifically about "${topic}" — not just tangentially related to the same domain.
+  const segments = candidates.map((candidate, index) => {
+    const overlappingText = episodeSegments
+      .filter(
+        (segment) =>
+          segment.start_ms <= candidate.endMs && segment.end_ms >= candidate.startMs
+      )
+      .map((segment) => segment.text.trim())
+      .filter((text) => text.length > 0)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+    const transcriptSnippet =
+      overlappingText.length > 300
+        ? `${overlappingText.slice(0, 300)}...`
+        : overlappingText;
+
+    return `[${index}] Label: "${candidate.label}" | Summary: "${candidate.summary}"
+    Transcript: "${transcriptSnippet}"`;
+  });
+  const prompt = `You are a podcast topic relevance judge. For each segment below, determine if it is specifically about "${topic}" — not just tangentially related to the same domain. Use the transcript text as ground truth when it contradicts the label/summary.
 
 Segments:
 ${segments.join("\n")}
@@ -650,7 +666,7 @@ For each segment, respond with ONLY the segment number and YES or NO:
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 200,
+        max_tokens: 300,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -882,8 +898,8 @@ export async function searchEpisodeWithTimestamps(
     return _legacySearchV4(episodeId, topic);
   }
 
+  const episodeSegments = await loadEpisodeSegments(episodeId);
   const topicEmbedding = await embedTopicQuery(topic);
-  const intentKeywords = extractIntentKeywords(topic);
   const candidates: TopicSegmentCandidate[] = [];
 
   for (const segment of topicSegments) {
@@ -896,16 +912,6 @@ export async function searchEpisodeWithTimestamps(
       continue;
     }
 
-    if (intentKeywords.length > 0) {
-      const searchableText = `${segment.label} ${segment.summary}`.toLowerCase();
-      const hasKeyword = intentKeywords.some((keyword) =>
-        searchableText.includes(keyword)
-      );
-      if (!hasKeyword) {
-        continue;
-      }
-    }
-
     candidates.push({
       startMs: segment.start_ms,
       endMs: segment.end_ms,
@@ -916,7 +922,11 @@ export async function searchEpisodeWithTimestamps(
     });
   }
 
-  const llmFiltered = await verifyTopicSegmentsWithLLM(topic, candidates);
+  const llmFiltered = await verifyTopicSegmentsWithLLM(
+    topic,
+    candidates,
+    episodeSegments
+  );
   const merged = aggressiveMerge(llmFiltered, SEARCH_CONFIG.MERGE_GAP_MS);
   return { ranges: merged, method: "semantic" };
 }
