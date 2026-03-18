@@ -8,6 +8,10 @@ import { embedTopicQuery } from "./embedding";
 import { averageVectors, cosine, mean, percentile, stdDev } from "./math";
 import { SEARCH_CONFIG, StructuralBoundary, TopicRange } from "./types";
 
+const PRE_PAD_MS = 25000; // 25 seconds before
+const POST_PAD_MS = 15000; // 15 seconds after
+const SNAP_WINDOW_MS = 10000; // max 10s beyond pad to find sentence boundary
+
 interface SegmentRow {
   id: number;
   segment_index: number;
@@ -928,7 +932,10 @@ export async function searchEpisodeWithTimestamps(
     episodeSegments
   );
   const merged = aggressiveMerge(llmFiltered, SEARCH_CONFIG.MERGE_GAP_MS);
-  return { ranges: merged, method: "semantic" };
+  const paddedAndSnapped = merged.map((range) =>
+    padAndSnapToSentence(range, episodeSegments)
+  );
+  return { ranges: paddedAndSnapped, method: "semantic" };
 }
 
 // Keep the old searchEpisode for backward compatibility
@@ -1211,4 +1218,49 @@ function aggressiveMerge(ranges: TopicRange[], gapMs: number): TopicRange[] {
   }
 
   return merged;
+}
+
+function padAndSnapToSentence(range: TopicRange, segments: SegmentRow[]): TopicRange {
+  const paddedStart = Math.max(0, range.startMs - PRE_PAD_MS);
+  const paddedEnd = range.endMs + POST_PAD_MS;
+
+  const startCandidates = segments.map((segment) => segment.start_ms);
+  const endCandidates = segments.map((segment) => segment.end_ms);
+
+  const snapStart = (target: number, candidates: number[]): number => {
+    let best = target;
+    let bestDist = Infinity;
+    for (const c of candidates) {
+      if (c > target) continue; // only snap to boundaries at or before target
+      const dist = target - c;
+      if (dist <= SNAP_WINDOW_MS && dist < bestDist) {
+        bestDist = dist;
+        best = c;
+      }
+    }
+    return best;
+  };
+
+  const snapEnd = (target: number, candidates: number[]): number => {
+    let best = target;
+    let bestDist = Infinity;
+    for (const c of candidates) {
+      if (c < target) continue; // only snap to boundaries at or after target
+      const dist = c - target;
+      if (dist <= SNAP_WINDOW_MS && dist < bestDist) {
+        bestDist = dist;
+        best = c;
+      }
+    }
+    return best;
+  };
+
+  const snappedStart = snapStart(paddedStart, startCandidates);
+  const snappedEnd = snapEnd(paddedEnd, endCandidates);
+
+  return {
+    ...range,
+    startMs: Math.max(0, snappedStart),
+    endMs: Math.max(Math.max(0, snappedStart), snappedEnd),
+  };
 }
