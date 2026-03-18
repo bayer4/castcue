@@ -276,7 +276,7 @@ SUMMARY: {one-line summary of what's discussed}
 ```
 
 5. Call the Anthropic API:
-   - **Model**: `claude-haiku-4-20250514` (cheaper than Sonnet, fast enough for this task)
+   - **Model**: `claude-haiku-4-5-20251001` (cheaper than Sonnet, fast enough for this task)
    - **max_tokens**: 150
    - Same retry logic as the existing `verifyClipsWithLLM` (2 retries with backoff)
 

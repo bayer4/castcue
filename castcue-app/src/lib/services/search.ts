@@ -432,10 +432,11 @@ Rules:
 - Find where this topic STARTS being a primary focus and where it STOPS being a primary focus.
 - Use the structural shift timestamps as hints, but trust the transcript content over them.
 - If the topic is not actually discussed as a primary subject, set RELEVANT to NO.
+- Use timestamps exactly as they appear in the transcript (m:ss or mm:ss format).
 
-Respond in EXACTLY this format (timestamps as total milliseconds):
-START_MS: {number}
-END_MS: {number}
+Respond in EXACTLY this format:
+START: {m:ss or mm:ss timestamp from the transcript}
+END: {m:ss or mm:ss timestamp from the transcript}
 RELEVANT: YES or NO
 SUMMARY: {one-line summary of what's discussed}`;
 
@@ -450,7 +451,7 @@ SUMMARY: {one-line summary of what's discussed}`;
             "anthropic-version": "2023-06-01",
           },
           body: JSON.stringify({
-            model: "claude-haiku-4-20250514",
+            model: "claude-haiku-4-5-20251001",
             max_tokens: 150,
             messages: [{ role: "user", content: prompt }],
           }),
@@ -472,11 +473,22 @@ SUMMARY: {one-line summary of what's discussed}`;
           break;
         }
 
-        const startMatch = responseText.match(/START_MS:\s*(\d+)/i);
-        const endMatch = responseText.match(/END_MS:\s*(\d+)/i);
+        const parseTimestampToMs = (ts: string): number => {
+          const parts = ts.split(":").map((p) => Number.parseInt(p.trim(), 10));
+          if (parts.length === 2 && parts.every(Number.isFinite)) {
+            return (parts[0] * 60 + parts[1]) * 1000;
+          }
+          if (parts.length === 3 && parts.every(Number.isFinite)) {
+            return (parts[0] * 3600 + parts[1] * 60 + parts[2]) * 1000;
+          }
+          return NaN;
+        };
+
+        const startMatch = responseText.match(/START:\s*(\d+:\d+(?::\d+)?)/i);
+        const endMatch = responseText.match(/END:\s*(\d+:\d+(?::\d+)?)/i);
         const summaryMatch = responseText.match(/SUMMARY:\s*(.*)/i);
-        const parsedStart = startMatch ? Number.parseInt(startMatch[1], 10) : NaN;
-        const parsedEnd = endMatch ? Number.parseInt(endMatch[1], 10) : NaN;
+        const parsedStart = startMatch ? parseTimestampToMs(startMatch[1]) : NaN;
+        const parsedEnd = endMatch ? parseTimestampToMs(endMatch[1]) : NaN;
         const summary = summaryMatch?.[1]?.trim() ?? "";
 
         if (
@@ -677,7 +689,21 @@ export async function searchEpisodeWithTimestamps(
       podcastTitle
     );
     console.log(`[search:v4] topic="${topic}" step=after_llm_refine ranges=${verified.length}`);
-    return { ranges: verified, method };
+
+    // 13. Post-LLM merge — the LLM narrows ranges independently, so previously
+    //     adjacent ranges can end up close together again. Re-merge with a
+    //     generous gap since these are already verified as relevant.
+    const POST_LLM_MERGE_GAP_MS = 180000; // 3 minutes
+    const remerged = aggressiveMerge(verified, POST_LLM_MERGE_GAP_MS);
+    console.log(`[search:v4] topic="${topic}" step=after_post_llm_merge ranges=${remerged.length}`);
+
+    // 14. Post-LLM minimum duration — drop micro-clips the LLM trimmed to
+    //     a passing mention rather than a real conversation.
+    const POST_LLM_MIN_MS = 60000; // 1 minute
+    const final = remerged.filter((r) => r.endMs - r.startMs >= POST_LLM_MIN_MS);
+    console.log(`[search:v4] topic="${topic}" step=after_post_llm_min_duration ranges=${final.length}`);
+
+    return { ranges: final, method };
   }
 
   // No API key - return snapped math boundaries without LLM refinement.
