@@ -64,6 +64,11 @@ export interface TopicRange {
   confidence: number; // Average similarity score
 }
 
+export interface StructuralBoundary {
+  boundaryMs: number;
+  velocityDrop: number;
+}
+
 /**
  * Search result for a topic within an episode
  */
@@ -110,10 +115,9 @@ export const SEARCH_CONFIG = {
   LEAD_PAD_MS: 10000, // 10s lead-in padding
   TRAIL_PAD_MS: 20000, // 20s trail-out padding
 
-  // Trailing continuation — once inside a confirmed topic conversation,
-  // keep extending the clip while segments stay above this lower bar.
-  CONTINUATION_THRESHOLD: 0.25,
-  MAX_CONTINUATION_MS: 300000, // Cap extension at 5 minutes
+  // Centroid expansion and structural boundary detection
+  CENTROID_FLOOR: 0.3, // Min similarity to conversation centroid
+  VELOCITY_Z_THRESHOLD: 1.0, // Std dev drop threshold for boundary detection
 
   // Merge gap — how far apart two ranges can be and still stitch together
   MERGE_GAP_MS: 90000, // 90s gap tolerance

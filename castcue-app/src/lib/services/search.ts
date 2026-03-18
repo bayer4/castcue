@@ -1,11 +1,12 @@
 // ============================================================
-// Search Service v3
-// Improved: adaptive thresholds, LLM verification, better merging
+// Search Service v4
+// Chain: Semantic Search -> Centroid Expansion -> Boundary Snap -> AI Refine
 // ============================================================
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { embedTopicQuery } from "./embedding";
-import { SEARCH_CONFIG, TopicRange } from "./types";
+import { averageVectors, cosine, mean, percentile, stdDev } from "./math";
+import { SEARCH_CONFIG, StructuralBoundary, TopicRange } from "./types";
 
 interface SegmentRow {
   id: number;
@@ -18,61 +19,6 @@ interface SegmentRow {
 
 interface SegmentWithSimilarity extends SegmentRow {
   similarity: number;
-}
-
-// ============================================================
-// Vector Math Utilities
-// ============================================================
-
-function cosine(a: number[], b: number[]): number {
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
-function mean(arr: number[]): number {
-  return arr.reduce((a, b) => a + b, 0) / arr.length;
-}
-
-function stdDev(arr: number[], avg: number): number {
-  const variance =
-    arr.reduce((sum, v) => sum + (v - avg) ** 2, 0) / arr.length;
-  return Math.sqrt(variance) || 1e-6;
-}
-
-function averageVectors(vectors: number[][]): number[] {
-  if (vectors.length === 0) return [];
-  if (vectors.length === 1) return vectors[0];
-
-  const dims = vectors[0].length;
-  const result = new Array(dims).fill(0);
-
-  for (const vec of vectors) {
-    for (let i = 0; i < dims; i++) {
-      result[i] += vec[i];
-    }
-  }
-
-  for (let i = 0; i < dims; i++) {
-    result[i] /= vectors.length;
-  }
-
-  return result;
-}
-
-/**
- * Get the value at a given percentile from a sorted array
- */
-function percentile(sorted: number[], p: number): number {
-  if (sorted.length === 0) return 0;
-  const idx = Math.ceil((p / 100) * sorted.length) - 1;
-  return sorted[Math.max(0, Math.min(idx, sorted.length - 1))];
 }
 
 // ============================================================
@@ -189,11 +135,12 @@ async function loadEpisodeSegments(
 async function loadEpisodeMetadata(episodeId: string): Promise<{
   episodeTitle?: string;
   podcastTitle?: string;
+  boundaries: StructuralBoundary[];
 }> {
   const supabase = createAdminClient();
   const { data: episode, error: episodeError } = await supabase
     .from("episodes")
-    .select("title, podcast_id")
+    .select("title, podcast_id, boundaries")
     .eq("id", episodeId)
     .maybeSingle();
 
@@ -201,11 +148,11 @@ async function loadEpisodeMetadata(episodeId: string): Promise<{
     console.warn(
       `[search:v3] failed to load episode metadata for ${episodeId}: ${episodeError.message}`
     );
-    return {};
+    return { boundaries: [] };
   }
 
   if (!episode) {
-    return {};
+    return { boundaries: [] };
   }
 
   let podcastTitle: string | undefined;
@@ -225,9 +172,34 @@ async function loadEpisodeMetadata(episodeId: string): Promise<{
     }
   }
 
+  const boundaries: StructuralBoundary[] = Array.isArray(episode.boundaries)
+    ? episode.boundaries
+        .map((entry) => {
+          if (
+            typeof entry === "object" &&
+            entry !== null &&
+            "boundaryMs" in entry &&
+            "velocityDrop" in entry
+          ) {
+            const boundaryMs = Number(
+              (entry as { boundaryMs: unknown }).boundaryMs
+            );
+            const velocityDrop = Number(
+              (entry as { velocityDrop: unknown }).velocityDrop
+            );
+            if (Number.isFinite(boundaryMs) && Number.isFinite(velocityDrop)) {
+              return { boundaryMs, velocityDrop };
+            }
+          }
+          return null;
+        })
+        .filter((entry): entry is StructuralBoundary => entry !== null)
+    : [];
+
   return {
     episodeTitle: typeof episode.title === "string" ? episode.title : undefined,
     podcastTitle,
+    boundaries,
   };
 }
 
@@ -240,7 +212,7 @@ async function loadEpisodeMetadata(episodeId: string): Promise<{
  * This kills false positives like "Iran" matching a conversation about
  * AI trust polling where Iran is mentioned once in passing.
  */
-async function verifyClipsWithLLM(
+async function _legacyVerifyClipsWithLLM(
   candidateRanges: Array<{
     startMs: number;
     endMs: number;
@@ -385,6 +357,180 @@ For each segment, respond with ONLY the segment number and YES or NO, one per li
   return [];
 }
 
+async function refineClipBoundariesWithLLM(
+  candidateRanges: Array<{
+    startMs: number;
+    endMs: number;
+    occurrences: number;
+    confidence: number;
+    nearbyBoundaries: number[];
+  }>,
+  segments: SegmentRow[],
+  topic: string,
+  episodeTitle?: string,
+  podcastTitle?: string
+): Promise<
+  Array<{
+    startMs: number;
+    endMs: number;
+    occurrences: number;
+    confidence: number;
+  }>
+> {
+  type AnthropicMessageResponse = {
+    content?: Array<{ type?: string; text?: string }>;
+  };
+
+  const formatTimestamp = (ms: number): string => {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSec / 60);
+    const seconds = String(totalSec % 60).padStart(2, "0");
+    return `${minutes}:${seconds}`;
+  };
+
+  if (candidateRanges.length === 0) return [];
+
+  const refined: Array<{
+    startMs: number;
+    endMs: number;
+    occurrences: number;
+    confidence: number;
+  }> = [];
+
+  const MAX_RETRIES = 2;
+
+  for (const range of candidateRanges) {
+    const transcriptLines = segments
+      .filter((segment) => segment.start_ms >= range.startMs && segment.end_ms <= range.endMs)
+      .map((segment) => `[${formatTimestamp(segment.start_ms)}] ${segment.text.trim()}`)
+      .filter((line) => line.length > 0);
+
+    let transcriptText = transcriptLines.join("\n");
+    if (transcriptText.length > 6000) {
+      transcriptText =
+        `${transcriptText.slice(0, 2500)}\n... [transcript truncated] ...\n${transcriptText.slice(-2500)}`;
+    }
+
+    const boundaryHints =
+      range.nearbyBoundaries.length > 0
+        ? range.nearbyBoundaries.map((ms) => formatTimestamp(ms)).join(", ")
+        : "none";
+
+    const prompt = `You are a podcast conversation boundary detector. Given a transcript excerpt and a topic, identify the precise timestamps where the conversation about this topic begins and ends.
+
+Topic: "${topic}"
+Podcast: "${podcastTitle ?? "Unknown"}"
+Episode: "${episodeTitle ?? "Unknown"}"
+
+Structural topic shifts detected near: ${boundaryHints}
+
+Transcript:
+${transcriptText}
+
+Rules:
+- The topic must be a central subject being discussed, not just mentioned in passing.
+- Find where this topic STARTS being a primary focus and where it STOPS being a primary focus.
+- Use the structural shift timestamps as hints, but trust the transcript content over them.
+- If the topic is not actually discussed as a primary subject, set RELEVANT to NO.
+
+Respond in EXACTLY this format (timestamps as total milliseconds):
+START_MS: {number}
+END_MS: {number}
+RELEVANT: YES or NO
+SUMMARY: {one-line summary of what's discussed}`;
+
+    let settled = false;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-haiku-4-20250514",
+            max_tokens: 150,
+            messages: [{ role: "user", content: prompt }],
+          }),
+        });
+
+        const rawBody = await response.text();
+        if (!response.ok) {
+          throw new Error(`Anthropic status ${response.status}`);
+        }
+
+        const data = JSON.parse(rawBody) as AnthropicMessageResponse;
+        const responseText =
+          data.content?.[0]?.type === "text" ? (data.content[0].text ?? "") : "";
+
+        const relevantMatch = responseText.match(/RELEVANT:\s*(YES|NO)/i);
+        const relevant = relevantMatch?.[1]?.toUpperCase();
+        if (relevant === "NO") {
+          settled = true;
+          break;
+        }
+
+        const startMatch = responseText.match(/START_MS:\s*(\d+)/i);
+        const endMatch = responseText.match(/END_MS:\s*(\d+)/i);
+        const summaryMatch = responseText.match(/SUMMARY:\s*(.*)/i);
+        const parsedStart = startMatch ? Number.parseInt(startMatch[1], 10) : NaN;
+        const parsedEnd = endMatch ? Number.parseInt(endMatch[1], 10) : NaN;
+        const summary = summaryMatch?.[1]?.trim() ?? "";
+
+        if (
+          relevant === "YES" &&
+          Number.isFinite(parsedStart) &&
+          Number.isFinite(parsedEnd) &&
+          parsedEnd > parsedStart
+        ) {
+          console.log(
+            `[search:v4][llm-refine] topic="${topic}" original=${range.startMs}-${range.endMs} refined=${parsedStart}-${parsedEnd} summary="${summary}"`
+          );
+          refined.push({
+            startMs: parsedStart,
+            endMs: parsedEnd,
+            occurrences: range.occurrences,
+            confidence: range.confidence,
+          });
+          settled = true;
+          break;
+        }
+
+        throw new Error("Failed to parse LLM boundary response");
+      } catch (error) {
+        if (attempt < MAX_RETRIES) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+          continue;
+        }
+        console.warn(
+          `[search:v4][llm-refine] topic="${topic}" fallback to math boundaries for ${range.startMs}-${range.endMs}`,
+          error
+        );
+        refined.push({
+          startMs: range.startMs,
+          endMs: range.endMs,
+          occurrences: range.occurrences,
+          confidence: range.confidence,
+        });
+        settled = true;
+      }
+    }
+
+    if (!settled) {
+      refined.push({
+        startMs: range.startMs,
+        endMs: range.endMs,
+        occurrences: range.occurrences,
+        confidence: range.confidence,
+      });
+    }
+  }
+
+  return refined;
+}
+
 // ============================================================
 // Main Search Function
 // ============================================================
@@ -401,11 +547,15 @@ export async function searchEpisodeWithTimestamps(
   episodeId: string,
   topic: string
 ): Promise<{ ranges: TopicRange[]; method: "semantic" | "keyword" }> {
-  const { episodeTitle, podcastTitle } = await loadEpisodeMetadata(episodeId);
+  const { episodeTitle, podcastTitle, boundaries } = await loadEpisodeMetadata(
+    episodeId
+  );
 
   // 1. Load all segments
   const segments = await loadEpisodeSegments(episodeId);
-  console.log(`[search:v3] topic="${topic}" step=segments_loaded count=${segments.length}`);
+  console.log(
+    `[search:v4] topic="${topic}" step=segments_loaded count=${segments.length}`
+  );
   if (segments.length === 0) {
     return { ranges: [], method: "semantic" };
   }
@@ -425,13 +575,15 @@ export async function searchEpisodeWithTimestamps(
   const similarityMean = similarityValues.length ? mean(similarityValues) : 0;
   const similarityP85 = similarityValues.length ? percentile(sortedSimilarities, 85) : 0;
   console.log(
-    `[search:v3] topic="${topic}" step=similarity_distribution min=${similarityMin.toFixed(4)} max=${similarityMax.toFixed(4)} mean=${similarityMean.toFixed(4)} p85=${similarityP85.toFixed(4)}`
+    `[search:v4] topic="${topic}" step=similarity_distribution min=${similarityMin.toFixed(4)} max=${similarityMax.toFixed(4)} mean=${similarityMean.toFixed(4)} p85=${similarityP85.toFixed(4)}`
   );
 
   // 4. Apply ADAPTIVE dual threshold
   let hits = applyAdaptiveThreshold(segments, similarities);
   let method: "semantic" | "keyword" = "semantic";
-  console.log(`[search:v3] topic="${topic}" step=after_adaptive_threshold hits=${hits.length}`);
+  console.log(
+    `[search:v4] topic="${topic}" step=after_adaptive_threshold hits=${hits.length}`
+  );
 
   // 5. Keyword fallback
   if (hits.length === 0) {
@@ -442,20 +594,35 @@ export async function searchEpisodeWithTimestamps(
     }
   }
 
-  // 6. Build ranges with actual timestamps
-  const rawRanges = buildTimestampRanges(segments, hits);
-
-  // 6b. Trailing continuation — extend ranges while the conversation stays on-topic
-  const continued = trailingContinuation(rawRanges, segments, hits, similarities);
-  console.log(`[search:v3] topic="${topic}" step=after_continuation ranges=${continued.length} extended=${continued.filter((r, i) => r.endMs > rawRanges[i]?.endMs).length}`);
+  // 6. Centroid expansion - grow hit clusters into candidate conversation windows
+  const expanded = centroidExpansion(segments, hits);
+  const segmentByIndex = new Map(segments.map((segment) => [segment.segment_index, segment]));
+  const candidateRanges: TopicRange[] = expanded
+    .map((cluster) => {
+      const startSegment = segmentByIndex.get(cluster.startIdx);
+      const endSegment = segmentByIndex.get(cluster.endIdx);
+      if (!startSegment || !endSegment) return null;
+      return {
+        startMs: startSegment.start_ms,
+        endMs: endSegment.end_ms,
+        occurrences: cluster.occurrences,
+        confidence: cluster.confidence,
+      };
+    })
+    .filter((range): range is TopicRange => range !== null);
+  console.log(
+    `[search:v4] topic="${topic}" step=after_centroid_expansion ranges=${candidateRanges.length}`
+  );
 
   // 7. Aggressive merge - combine ranges within gap tolerance of each other
-  const merged = aggressiveMerge(continued, SEARCH_CONFIG.MERGE_GAP_MS);
-  console.log(`[search:v3] topic="${topic}" step=after_merging ranges=${merged.length}`);
+  const merged = aggressiveMerge(candidateRanges, SEARCH_CONFIG.MERGE_GAP_MS);
+  console.log(`[search:v4] topic="${topic}" step=after_merging ranges=${merged.length}`);
 
   // 8. Filter by minimum hit density (at least 2 hits per range)
   const dense = merged.filter((r) => r.occurrences >= 2);
-  console.log(`[search:v3] topic="${topic}" step=after_density_filter ranges=${dense.length}`);
+  console.log(
+    `[search:v4] topic="${topic}" step=after_density_filter ranges=${dense.length}`
+  );
 
   // 9. Filter by minimum duration
   const filtered = dense.filter(
@@ -475,48 +642,49 @@ export async function searchEpisodeWithTimestamps(
           return distinguishingKeywords.some((kw) => rangeText.includes(kw));
         });
   console.log(
-    `[search:v3] topic="${topic}" step=after_keyword_validation ranges=${keywordValidated.length} keywords=${JSON.stringify(distinguishingKeywords)}`
+    `[search:v4] topic="${topic}" step=after_keyword_validation ranges=${keywordValidated.length} keywords=${JSON.stringify(distinguishingKeywords)}`
   );
 
-  // 11. LLM verification - collect sample text for each range
-  const rangesWithText = keywordValidated.map((range) => {
-    // Use original hit segments (not padded context) within this range.
-    // Then take highest-similarity hits to focus Claude on the core topic discussion.
-    const topRangeHits = hits
-      .filter(
-        (h) =>
-          h.start_ms >= range.startMs &&
-          h.end_ms <= range.endMs &&
-          h.similarity > 0
-      )
-      .sort((a, b) => b.similarity - a.similarity)
-      .slice(0, 3);
-
-    const sampleText = topRangeHits
-      .map((hit) =>
-        hit.text.length > 800 ? `${hit.text.substring(0, 800)}...` : hit.text
-      )
-      .join(" ");
-    return { ...range, sampleText };
+  // 11. Snap each range to precomputed structural boundaries.
+  const snapped = keywordValidated.map((range) => {
+    const snappedRange = snapToBoundaries(range.startMs, range.endMs, boundaries);
+    return {
+      ...range,
+      startMs: snappedRange.startMs,
+      endMs: snappedRange.endMs,
+    };
   });
+  console.log(`[search:v4] topic="${topic}" step=after_boundary_snap ranges=${snapped.length}`);
 
-  // Only run LLM verification if we have an API key and candidates
-  if (process.env.ANTHROPIC_API_KEY && rangesWithText.length > 0) {
-    const verified = await verifyClipsWithLLM(
-      rangesWithText,
+  // 12. LLM refinement for precise start/end boundaries.
+  if (process.env.ANTHROPIC_API_KEY && snapped.length > 0) {
+    const rangesWithBoundaryHints = snapped.map((range) => ({
+      ...range,
+      nearbyBoundaries: boundaries
+        .filter(
+          (boundary) =>
+            Math.abs(boundary.boundaryMs - range.startMs) <= 120000 ||
+            Math.abs(boundary.boundaryMs - range.endMs) <= 120000
+        )
+        .map((boundary) => boundary.boundaryMs),
+    }));
+
+    const verified = await refineClipBoundariesWithLLM(
+      rangesWithBoundaryHints,
+      segments,
       topic,
       episodeTitle,
       podcastTitle
     );
-    console.log(`[search:v3] topic="${topic}" step=after_llm_verification ranges=${verified.length}`);
+    console.log(`[search:v4] topic="${topic}" step=after_llm_refine ranges=${verified.length}`);
     return { ranges: verified, method };
   }
 
-  // No API key - return without LLM verification
+  // No API key - return snapped math boundaries without LLM refinement.
   console.log(
-    `[search:v3] topic="${topic}" step=after_llm_verification ranges=${keywordValidated.length} skipped=true`
+    `[search:v4] topic="${topic}" step=after_llm_refine ranges=${snapped.length} skipped=true`
   );
-  return { ranges: keywordValidated, method };
+  return { ranges: snapped, method };
 }
 
 // Keep the old searchEpisode for backward compatibility
@@ -642,142 +810,130 @@ function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-// ============================================================
-// Range Building
-// ============================================================
-
-/**
- * Build ranges using actual segment timestamps with context padding
- */
-function buildTimestampRanges(
+function centroidExpansion(
   segments: SegmentRow[],
   hits: SegmentWithSimilarity[]
-): TopicRange[] {
-  if (hits.length === 0) return [];
+): Array<{
+  startIdx: number;
+  endIdx: number;
+  centroid: number[];
+  occurrences: number;
+  confidence: number;
+}> {
+  if (segments.length === 0 || hits.length === 0) return [];
 
-  // Expand hits with context
-  const hitIndices = new Set(hits.map((h) => h.segment_index));
-  const expandedSegments: SegmentWithSimilarity[] = [];
+  const sortedHits = [...hits].sort((a, b) => a.segment_index - b.segment_index);
+  const clusters: SegmentWithSimilarity[][] = [];
+  let currentCluster: SegmentWithSimilarity[] = [];
 
-  for (const seg of segments) {
-    let includeForContext = false;
-    for (const hitIdx of hitIndices) {
-      if (
-        seg.segment_index >= hitIdx - SEARCH_CONFIG.CONTEXT_SEGMENTS_BEFORE &&
-        seg.segment_index <= hitIdx
-      ) {
-        includeForContext = true;
-        break;
-      }
+  for (const hit of sortedHits) {
+    if (currentCluster.length === 0) {
+      currentCluster.push(hit);
+      continue;
     }
 
-    if (includeForContext) {
-      const isDirectHit = hitIndices.has(seg.segment_index);
-      expandedSegments.push({
-        ...seg,
-        similarity: isDirectHit
-          ? (hits.find((h) => h.segment_index === seg.segment_index)
-              ?.similarity ?? 0)
-          : 0,
-      });
-    }
-  }
-
-  // Merge into continuous ranges
-  expandedSegments.sort((a, b) => a.segment_index - b.segment_index);
-
-  const rawRanges: Array<{
-    startMs: number;
-    endMs: number;
-    hitCount: number;
-    totalSimilarity: number;
-  }> = [];
-
-  let currentRange: (typeof rawRanges)[number] | null = null;
-
-  for (let i = 0; i < expandedSegments.length; i++) {
-    const seg = expandedSegments[i];
-    const isConsecutive =
-      i > 0 &&
-      seg.segment_index === expandedSegments[i - 1].segment_index + 1;
-
-    if (!currentRange || !isConsecutive) {
-      if (currentRange) rawRanges.push(currentRange);
-      currentRange = {
-        startMs: seg.start_ms,
-        endMs: seg.end_ms,
-        hitCount: seg.similarity > 0 ? 1 : 0,
-        totalSimilarity: seg.similarity,
-      };
+    const prev = currentCluster[currentCluster.length - 1];
+    if (hit.segment_index - prev.segment_index <= 5) {
+      currentCluster.push(hit);
     } else {
-      currentRange.endMs = seg.end_ms;
-      if (seg.similarity > 0) {
-        currentRange.hitCount++;
-        currentRange.totalSimilarity += seg.similarity;
-      }
+      clusters.push(currentCluster);
+      currentCluster = [hit];
     }
   }
-
-  if (currentRange) rawRanges.push(currentRange);
-
-  // Apply time padding
-  return rawRanges.map((r) => ({
-    startMs: Math.max(0, r.startMs - SEARCH_CONFIG.LEAD_PAD_MS),
-    endMs: r.endMs + SEARCH_CONFIG.TRAIL_PAD_MS,
-    occurrences: r.hitCount,
-    confidence: r.hitCount > 0 ? r.totalSimilarity / r.hitCount : 0.5,
-  }));
-}
-
-// ============================================================
-// Trailing Continuation
-// ============================================================
-
-/**
- * Once we've confirmed a conversation about a topic, the bar for
- * *staying* in that conversation should be lower than the bar for
- * *detecting* a new one. This scans forward from the last hit in
- * each range and extends the range while segments remain above
- * CONTINUATION_THRESHOLD.
- */
-function trailingContinuation(
-  ranges: TopicRange[],
-  segments: SegmentRow[],
-  hits: SegmentWithSimilarity[],
-  similarities: Map<number, number>,
-): TopicRange[] {
-  if (ranges.length === 0 || segments.length === 0) return ranges;
+  if (currentCluster.length > 0) {
+    clusters.push(currentCluster);
+  }
 
   const segmentByIndex = new Map(segments.map((s) => [s.segment_index, s]));
+  const minSegIndex = Math.min(...segments.map((s) => s.segment_index));
   const maxSegIndex = Math.max(...segments.map((s) => s.segment_index));
 
-  return ranges.map((range) => {
-    const rangeHits = hits.filter(
-      (h) => h.start_ms >= range.startMs && h.end_ms <= range.endMs,
+  const expanded = clusters
+    .map((cluster) => {
+      const hitEmbeddings = cluster
+        .map((h) => h.embedding)
+        .filter((embedding) => Array.isArray(embedding) && embedding.length > 0);
+      if (hitEmbeddings.length === 0) return null;
+
+      const centroid = averageVectors(hitEmbeddings);
+      const clusterStart = Math.min(...cluster.map((h) => h.segment_index));
+      const clusterEnd = Math.max(...cluster.map((h) => h.segment_index));
+
+      let startIdx = clusterStart;
+      let endIdx = clusterEnd;
+
+      for (let idx = clusterEnd + 1; idx <= maxSegIndex; idx++) {
+        const seg = segmentByIndex.get(idx);
+        if (!seg?.embedding?.length) break;
+        const simToCentroid = cosine(seg.embedding, centroid);
+        if (simToCentroid < SEARCH_CONFIG.CENTROID_FLOOR) break;
+        endIdx = idx;
+      }
+
+      for (let idx = clusterStart - 1; idx >= minSegIndex; idx--) {
+        const seg = segmentByIndex.get(idx);
+        if (!seg?.embedding?.length) break;
+        const simToCentroid = cosine(seg.embedding, centroid);
+        if (simToCentroid < SEARCH_CONFIG.CENTROID_FLOOR) break;
+        startIdx = idx;
+      }
+
+      const occurrences = cluster.length;
+      const confidence =
+        cluster.reduce((sum, hit) => sum + hit.similarity, 0) / occurrences;
+
+      return {
+        startIdx,
+        endIdx,
+        centroid,
+        occurrences,
+        confidence,
+      };
+    })
+    .filter(
+      (
+        value
+      ): value is {
+        startIdx: number;
+        endIdx: number;
+        centroid: number[];
+        occurrences: number;
+        confidence: number;
+      } => value !== null
     );
-    if (rangeHits.length === 0) return range;
 
-    const lastHitIdx = Math.max(...rangeHits.map((h) => h.segment_index));
-    const originalEndMs = range.endMs;
-    let extendedEndMs = range.endMs;
+  return expanded;
+}
 
-    for (let idx = lastHitIdx + 1; idx <= maxSegIndex; idx++) {
-      const seg = segmentByIndex.get(idx);
-      if (!seg) break;
+function snapToBoundaries(
+  candidateStartMs: number,
+  candidateEndMs: number,
+  boundaries: StructuralBoundary[]
+): { startMs: number; endMs: number } {
+  if (boundaries.length === 0) {
+    return { startMs: candidateStartMs, endMs: candidateEndMs };
+  }
 
-      if (seg.start_ms - originalEndMs > SEARCH_CONFIG.MAX_CONTINUATION_MS) break;
+  const sorted = [...boundaries].sort((a, b) => a.boundaryMs - b.boundaryMs);
 
-      const sim = similarities.get(idx) ?? 0;
-      if (sim < SEARCH_CONFIG.CONTINUATION_THRESHOLD) break;
+  let snappedStartMs = candidateStartMs;
+  const before = [...sorted]
+    .reverse()
+    .find((b) => b.boundaryMs <= candidateStartMs);
+  if (before && candidateStartMs - before.boundaryMs <= 90000) {
+    snappedStartMs = before.boundaryMs;
+  }
 
-      extendedEndMs = seg.end_ms + SEARCH_CONFIG.TRAIL_PAD_MS;
-    }
+  let snappedEndMs = candidateEndMs;
+  const after = sorted.find((b) => b.boundaryMs >= candidateEndMs);
+  if (after && after.boundaryMs - candidateEndMs <= 90000) {
+    snappedEndMs = after.boundaryMs;
+  }
 
-    if (extendedEndMs > range.endMs) {
-      return { ...range, endMs: extendedEndMs };
-    }
-    return range;
-  });
+  return {
+    startMs: Math.max(0, snappedStartMs - SEARCH_CONFIG.LEAD_PAD_MS),
+    endMs: snappedEndMs + SEARCH_CONFIG.TRAIL_PAD_MS,
+  };
 }
 
 // ============================================================

@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { computeStructuralBoundaries } from "./boundaries";
 import { embedBatch } from "./embedding";
 import { sliceIntoSegments } from "./segmentation";
 import { transcribeEpisode } from "./transcription";
@@ -86,6 +87,22 @@ export async function processEpisode(episodeId: string) {
     const { error: segmentInsertError } = await admin.from("segments").insert(rows);
     if (segmentInsertError) {
       await fail(segmentInsertError.message);
+    }
+
+    const boundaries = computeStructuralBoundaries(
+      rows.map((row, index) => ({
+        segment_index: row.segment_index,
+        start_ms: row.start_ms,
+        end_ms: row.end_ms,
+        embedding: embeddings[index] ?? [],
+      }))
+    );
+    const { error: boundariesError } = await admin
+      .from("episodes")
+      .update({ boundaries })
+      .eq("id", episodeId);
+    if (boundariesError) {
+      await fail(boundariesError.message);
     }
 
     const { error: doneError } = await admin.from("episodes").update({ status: "ready" }).eq("id", episodeId);
