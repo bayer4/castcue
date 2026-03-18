@@ -15,7 +15,30 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: "Freq",
-  description: "Podcast clips for topics you care about",
+  description: "Follow topics, not podcasts.",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
+  openGraph: {
+    title: "Freq",
+    description: "Conversations that matter",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Freq — Conversations that matter",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Freq",
+    description: "Conversations that matter",
+    images: ["/og-image.png"],
+  },
 };
 
 export default function RootLayout({
