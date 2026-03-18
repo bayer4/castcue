@@ -1,4 +1,4 @@
--- CastCue Supabase schema
+-- Freq Supabase schema
 -- Run this in Supabase SQL editor.
 -- PREREQUISITE: Run in Supabase SQL editor if not already present:
 -- (see topic_segments table below)

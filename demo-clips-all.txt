@@ -1,0 +1,236 @@
+ALL CLIPS — DEMO PREP
+Generated: 2026-03-18T20:06:55.483Z
+Total clips: 4
+================================================================================
+
+
+### All-In with Chamath, Jason, Sacks & Friedberg (4 clips) ###
+================================================================================
+
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+Topic: AI agents | 10:07-12:08 (121s) | conf=0.648
+Episode: Rewriting the Rules: The SEC & CFTC on Crypto, IPOs & the Future of American Markets
+Segment Label: AI Agents and Updated Regulatory Framework
+Segment Summary: Discussion of regulatory approach to AI agents in markets and the need to build new guardrails rather than apply old rules.
+
+[9:37] until now i think the approach has always been let's apply the old rules and regulations and and that's gonna work out and make sure that nobody can actually innovate and and create something new so we are embracing these opportunities in the markets
+
+[10:07] up guardrails so i do think there are unique risks when you have the ability for an agent to go out and deploy capital on on basically an autonomous basis and and that's gonna be something that our markets we've really really never seen before as reg
+
+[10:37] think there's any reason we can't have this technology as built here in america i agree with that and from from my point of view there are so many benefits to come from distributed ledger ledger technology for the financial services industry where we
+
+[11:07] bumps you know to prevent fraud and things like that but for many and for some instruments it might not be possible but your discussion there 20 fourseven and all that i think is is really an exciting prospect liquidity perspective having the whole c
+
+[11:37] what mike and i are striving to do in harmonizing the approach of our two agencies is to and hopefully we'll get a statute out of the whole clarity act discussions going on in the hill right now that's really necessary to future proof what we're doin
+
+
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+Topic: AI agents | 1:05:38-1:07:10 (92s) | conf=0.475
+Episode: Iran War, Oil Shock, Off Ramps, AI's Revenue Explosion and PR Nightmare
+Segment Label: Frontier Model Development & Industry Consolidation
+Segment Summary: Discussion of newly formed groups like those from Carpathi working on frontier AI models and the concentration of AI development.
+
+[1:05:08] sure how you factor this in at altimeter into your thinking but this seems to me to be a massive headwind against the two big bets you have all of these open source models we started running them picking up about 85% of our tokens right now and every
+
+[1:05:38] project from carpathi that came out this weekend for people who don't know we now have a group of tinkerers who are setting up their open clause and now setting up a large language models and now trying to train them with this auto research tool this
+
+[1:06:08] they're doing some like planning you know with the frontier labs and then they're kind of doing the execution if you will with the open source models so they're running an ensemble of model strategy but here's what i think is more impressive we have 
+
+[1:06:39] and that's in the face jason of all this open source usage so what does it tell me it tells me that the tam is dramatically bigger than any of us think that it is and that you know when we when we look back on this period you know that will be the bi
+
+
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+Topic: iran | 16:43-19:45 (182s) | conf=0.585
+Episode: Graham Allison on the Global Realignment: Iran, China, Israel, Greenland
+Segment Label: Scenarios for Iran Conflict Resolution
+Segment Summary: Discussion of multiple possible endgames for the Iran-Israel conflict and the risks of escalation versus diplomatic solutions.
+
+[16:13] of the attack i was at the the defense department and i gave them a list of 11 things that i would do and be capable of doing if i were playing the iranian hand and they seem to be i mean i i i hardly even wanna say out loud but they they act like a 
+
+[16:43] is twice as many people 100,000,000 versus 50,000,000 four times the land area a much better equipped military and arguably the military system the regime is embedded in every aspect of industry so the more successful the united states is in dismantl
+
+[17:13] publicly stated it's time to finish them off it's time to go all the way etcetera does that not then leave a country with no infrastructure no leadership a 100,000,000 people in tatters and that's the classic breeding ground for some of these extremi
+
+[17:44] that i mean you could do four or five different scenarios for how this might conceivably end it could end up being an extended civil war in in iran among the various national groups even some of them possibly seceding so again fairly chaotic look lik
+
+[18:14] on the number of people and how did that work out so i i i say that i'm i'm a small c conservative and kinda think history is not always no certainly not the only guy but it's a good place to start oh i'm i i would say nervous yeah is it too late to 
+
+[18:44] it seems like we may be a little too far gone now in iran and that to take this all the way might be very difficult to manage alright is it too late if i were again we're all in the dark and all the uncertainty so back to point one but after that i w
+
+[19:14] economy is a crucial element of that that's part of the framing of the of the china relationship the impact of this on the economy is already evident okay and could become more evident the public opinion again i think he's i saw today in the journal 
+
+
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+-
+Topic: iran | 21:17-23:50 (153s) | conf=0.486
+Episode: Graham Allison on the Global Realignment: Iran, China, Israel, Greenland
+Segment Label: Domestic Political Consequences and MAGA Criticism
+Segment Summary: Discussion of conservative skepticism toward the Iran policy and concerns from MAGA supporters about Trump being captured by Israeli interests.
+
+[20:46] destroyed and that'll be an interesting struggle to see how that goes earlier trump demonstrated that when he thought it was in american interest he was prepared to pull bb's chain so we'll see this is i think in before we move out of the mena region
+
+[21:17] are are high on their list and he's been pretty clear hey we're not gonna put boots on the ground and then there's this antisemitic underpinning that's happening in america that's become pretty acute and you had rubio who we mentioned earlier say hey
+
+[21:48] people in the maga party who believe trump has betrayed them and that he's captured by the israeli government in some way and he's doing their bidding i'm not saying that that's my perspective but that is a an undertone that we're seeing and that's s
+
+[22:18] people whom i know mostly and respect mostly in israel are the national security barons the people who've been the chief of staff or the head of mossad or the head of shin bet or the people that work in that in those structures and they believe that 
+
+[22:48] is you know anti semitic but he's been i think very clear and very courageous in pointing out that what bb's doing to israel's democracy is really destroying it and the impact of that on jewish kids in america i mean i say this on campus where they w
+
+[23:19] crazy right wing settlers and their activities in the in the occupied west bank or they look at some of the activities in gaza or they look at now the kind of unlimited war without any pro any even attempt to make arguments about proportionality and 
+

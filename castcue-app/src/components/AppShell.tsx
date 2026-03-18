@@ -86,7 +86,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
                 <circle cx="18" cy="15" r="3" />
               </svg>
             </div>
-            <span className="text-lg font-bold tracking-tight">CastCue</span>
+            <span className="text-lg font-bold tracking-tight">Freq</span>
           </div>
           <p className="mt-1.5 text-[11px] font-medium uppercase tracking-widest text-[var(--text-tertiary)]">
             Conversations that matter

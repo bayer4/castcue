@@ -101,7 +101,7 @@ export default function TopicsPage() {
       <header className="mb-6">
         <h2 className="text-2xl font-bold tracking-tight">Topics</h2>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">
-          Add what you care about and CastCue will queue up matching conversations.
+          Add what you care about and Freq will queue up matching conversations.
         </p>
       </header>
 

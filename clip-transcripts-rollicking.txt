@@ -1,0 +1,366 @@
+TRANSCRIPT SEGMENTS FOR EACH "NBA DRAFT" CLIP
+Episode: A Rollicking NBA Mailbag and March Madness Storylines
+Episode ID: 6308761a-68c5-4005-a183-0313a3f4bb4e
+Total clips generated: 11
+Total transcript segments in episode: 195
+Total topic_segments for episode: 58
+================================================================================
+
+PRE-COMPUTED TOPIC SEGMENTS FOR THIS EPISODE:
+------------------------------------------------------------
+[0:00 - 1:09] Venmo Ad
+  Summary: Advertisement for Venmo cashback rewards program.
+[1:10 - 1:40] Intro and Mailbag Setup
+  Summary: Bill introduces guests Rob Mahoney, Kyle Mann, and Tate Frazier, previews mailbag segment.
+[2:11 - 3:41] NBA Title Contenders Discussion
+  Summary: Hosts discuss which NBA teams could win the title, focusing on Mavericks, Celtics, Cavaliers, Knicks, and Pistons.
+[4:12 - 8:13] Lakers' Chemistry and Role Players
+  Summary: Analysis of Lakers' performance, LeBron's health, and role players like JJ Redick and Austin Reaves.
+[8:44 - 10:15] Joel Embiid's Games Missed vs. Played
+  Summary: Discussion of Embiid's injury history and whether he'll reach a milestone of 1000 games missed.
+[10:45 - 12:47] Spurs' Draft Strategy and Asset Building
+  Summary: Examination of San Antonio's successful rebuilding approach through draft picks and prospect development.
+[12:47 - 13:47] Record Streaks and Game Specificity
+  Summary: Tangential discussion about knowing specific records and streaks with precision.
+[13:47 - 22:21] Highest Single-Game Scoring Performances
+  Summary: Detailed analysis of highest scoring games in NBA history, including Kobe's 81-point game and other historic performances.
+[22:21 - 24:22] Mailbag Question: 2006 Kobe Performance
+  Summary: Reader Brad asks about Kobe's 2006 game and whether modern replay technology would have impacted the outcome.
+[24:22 - 25:54] Instant Replay Review Process Criticism
+  Summary: Hosts critique NBA's use of instant replay during games and suggest improvements.
+[25:54 - 28:25] Steph Curry's 2015 Finals Game 6 Ankle Controversy
+  Summary: Discussion of the controversial non-call on Curry's ankle twist and its impact on his legacy.
+[28:25 - 28:56] Saint Patrick's Day Public Safety PSA
+  Summary: Brief public safety announcement about Saint Patrick's Day celebrations.
+[28:56 - 30:26] Mailbag Question: Wendy and the Chargers
+  Summary: Reader question about whether someone would trade their girlfriend Wendy for the LA Chargers.
+[30:26 - 32:58] Worst Sports Merchandise Discussion
+  Summary: Hosts discuss terrible sports merchandise from past eras, including 2007 Patriots and 2004 Yankees items.
+[32:58 - 35:29] OKC Title Defense Ranking
+  Summary: Analysis of Oklahoma City's title defense this season compared to recent championship defenses.
+[35:29 - 37:00] Mailbag Question: Current NBA Players in Mount Rushmore
+  Summary: Discussion of which current NBA players could be in a modern basketball Mount Rushmore.
+[37:00 - 38:30] Name Switching Hypothetical
+  Summary: Hypothetical about switching NBA player names and what it would mean for their legacies.
+[38:30 - 40:31] 2026 Draft Class Assessment
+  Summary: Analysis of the 2026 NBA draft class and whether current contenders can maintain success.
+[40:31 - 42:01] Mailbag Question: Lakers' Payroll and Assets
+  Summary: Reader Dan points out Lakers' high payroll with limited tradeable assets and flexibility.
+[42:01 - 43:33] Mailbag Question: Shane Larkin Injury Conspiracy
+  Summary: Discussion of a listener's belief that Shane Larkin's 2018 injury changed Celtics history.
+[43:33 - 45:34] Alternative History Sports Scenarios
+  Summary: Hosts debate alternate outcomes of various NBA seasons and tournaments.
+[45:34 - 46:34] NBA Players Morphing into Other Positions
+  Summary: Hypothetical about NBA players gradually evolving into different positions over time.
+[46:34 - 48:05] Mailbag Question: Tall Players Sleeping in Hotels
+  Summary: Listener asks how 7-foot NBA players manage to sleep comfortably in hotel beds.
+[48:05 - 50:36] NBA Moments That Shocked Culture
+  Summary: Discussion of NBA moments that genuinely surprised people outside the sport.
+[51:06 - 54:39] Mailbag Question: LeBron as Player-Coach
+  Summary: Reader Edward Bender asks about LeBron joining a team as a player-coach for his legacy.
+[55:09 - 56:11] Sam's Club Ad
+  Summary: Advertisement for Sam's Club membership benefits.
+[56:11 - 56:41] Venmo Mastercard Ad
+  Summary: Advertisement for Venmo Mastercard financial services.
+[56:41 - 57:42] March Madness Intro with Tate and Kyle
+  Summary: Transition to March Madness discussion with Tate Frazier and Kyle Mann joining.
+[57:42 - 59:12] March Madness Tournament Overview
+  Summary: Overview of March Madness teams including Alabama, Michigan State, and tournament seeding.
+[59:42 - 1:02:13] Player Comparisons: Acuff and Others
+  Summary: Hosts discuss player comparisons for Arkansas' Acuff to Kyrie Irving and other elite guards.
+[1:02:13 - 1:03:43] Guard Size Trends and Acuff's Defense
+  Summary: Analysis of how modern NBA prefers bigger guards and Acuff's defensive capabilities.
+[1:03:43 - 1:05:14] Acuff Comparisons and Arkansas Team Importance
+  Summary: Further discussion of Acuff's comps and his critical role for Arkansas.
+[1:05:14 - 1:06:44] College Coaches and Tournament Calls
+  Summary: Discussion of coaches calling out tournament selection committees for their sons.
+[1:06:44 - 1:07:45] Flaming's Scoring and Game Performance
+  Summary: Analysis of Fleming's scoring ability but inconsistency in big games.
+[1:07:45 - 1:08:45] March Madness Impact on Draft Prospects
+  Summary: Discussion of how March Madness performance will affect draft stock for players.
+[1:08:45 - 1:09:15] Michelob Ultra Ad
+  Summary: Advertisement for Michelob Ultra beer with courtside promotion.
+[1:09:15 - 1:10:15] State Farm Tax Services Ad
+  Summary: Advertisement for State Farm tax expert services.
+[1:10:15 - 1:11:45] College Basketball vs. NBA Comparison
+  Summary: Hosts compare quality of college basketball play to NBA standards.
+[1:11:45 - 1:13:46] Point Guard Depth in College Basketball
+  Summary: Discussion of exceptional point guard talent in college basketball this year.
+[1:13:46 - 1:14:46] College Talent Development and NBA Prep
+  Summary: Analysis of how college coaches develop talent and prepare players for NBA.
+[1:14:46 - 1:16:17] Tournament Favorites and Sleepers
+  Summary: Hosts discuss tournament favorites, South Carolina, and potential Cinderella stories.
+[1:16:17 - 1:17:48] Khalil Boozer and South Carolina's Run
+  Summary: Focus on South Carolina team and Khalil Boozer stepping in for injured Caleb Foster.
+[1:17:48 - 1:19:18] Draft Stock Changes and Player Development
+  Summary: Discussion of how tournament performance affects draft stock for various players.
+[1:19:18 - 1:20:50] Potential Tournament Storylines
+  Summary: Hosts discuss potential Cinderella stories and surprising teams that could make runs.
+[1:20:50 - 1:21:20] Ivy League Final and Tournament Excitement
+  Summary: Brief mention of Ivy League championship game and its quality.
+[1:21:20 - 1:22:51] AJ Dybantae and Arkansas Potential
+  Summary: Discussion of AJ Dybantae's role in Arkansas' tournament success.
+[1:22:51 - 1:23:51] UConn Tournament Concerns
+  Summary: Analysis of UConn's tournament readiness and back-to-back game challenges.
+[1:23:51 - 1:25:22] BYU's Roster Depth and X-Factors
+  Summary: Discussion of BYU's strong roster and potential x-factors for tournament success.
+[1:25:22 - 1:27:23] Nate Darren Peterson's Coaching Influence
+  Summary: Analysis of Nate Darren Peterson's coaching style and impact on team performance.
+[1:27:54 - 1:28:54] Vuori Ad
+  Summary: Advertisement for Vuori signature dream knit fabric clothing.
+[1:28:54 - 1:29:54] LinkedIn Ads Segment
+  Summary: Advertisement for LinkedIn B2B marketing platform.
+[1:29:54 - 1:31:25] Tournament Repeat Winners Discussion
+  Summary: Discussion of whether college basketball players should stay for multiple tournament runs.
+[1:31:25 - 1:32:55] Filon and Acuff Comparison
+  Summary: Analysis comparing Filon and Acuff's basketball abilities and draft prospects.
+[1:32:55 - 1:34:26] Amen Thompson and Draft Projections
+  Summary: Discussion of Amen Thompson's potential as a basketball player and draft pick.
+[1:34:26 - 1:35:26] Tennessee's Physical Play and Development
+  Summary: Analysis of Tennessee's physical playing style and how it develops players.
+[1:35:26 - 1:36:26] Illinois and Long-Term Player Trends
+  Summary: Discussion of Illinois basketball and skinny face-up players in modern basketball.
+[1:36:26 - 1:37:28] LeBron's College Experience Hypothetical
+  Summary: Hosts debate hypothetical about LeBron James' college basketball experience.
+[1:37:28 - 1:38:00] DraftKings and Gambling Ad
+  Summary: Advertisement for DraftKings sports betting with responsible gambling messaging.
+
+================================================================================
+
+
+================================================================================
+CLIP 1 of 11
+------------------------------------------------------------
+Time: 2:11 - 3:41 (90s)
+Confidence: 0.4587
+Matching transcript segments: 4
+------------------------------------------------------------
+
+[1:40 - 2:11]
+so stay tuned for that we're gonna do a little mailbag and i have some topical questions rob i only sent you like three so some of these are surprises you're not gonna be surprised by this first one this is from every lakers fan i know simmons can i believe in the lakers yet three question marks that's just that's an amalgam of all the lakers text that i've gotten i know you did a little bit with zach on his podcast on thursday yeah their last 11
+
+[2:11 - 2:41]
+they're eight and three they have the fourth net rating first offensive rating luca not that he didn't look like luca before but this is probably the most fun he it seems like he's had and they had an awesome win last night that came down to austin reeves throwing the ball against the rim and catching it and putting it back in which works one out of 200 times i don't know but that was the one 300 times i mean was that was the one as precisely executed as that could executed as that could exactly be so what do you think i i mean my four contenders right now i would say the three west teams
+
+[2:41 - 3:11]
+i think the celtics have to be in there now with tatum sure and then cleveland knicks pistons i wanna see how these next 13 games go would you move that fourth spot in the west is wide open would you would you have the lakers as the fourth best team in the west right now i i'm very tempted and i so here's the thing it's tempting because the lakers have been so good the defense i think is legitimately worlds ahead of where it was a couple months ago marcus smart in the rotation in the starting lineup has been really
+
+[3:11 - 3:41]
+good for them luka as you mentioned just been unbelievable like all those things are real they're also real because the nuggets have been kind of like like trying to get their feet under them it's hard to know who's gonna be healthy for them and when they're still finding their way the rockets have fallen off a cliff the timberwolves are out in the wilderness so it's like if not the lakers is it the wolves by default like i don't know who else you would pick i mean you could have talked me into a stealth underdog clippers case before niederhauser got hurt and then kawhi sprained
+
+
+================================================================================
+CLIP 2 of 11
+------------------------------------------------------------
+Time: 24:22 - 25:54 (92s)
+Confidence: 0.3741
+Matching transcript segments: 4
+------------------------------------------------------------
+
+[23:52 - 24:22]
+like sell me taco bell or whatever it needs to happen especially when you'll catch moments during these broadcasts where actual gameplay is going on game goes minimized ad goes almost full screen as like again as the game is going on why is that not happening during a replay review why aren't we just factoring that like you're just gonna have time baked into all of these games where somebody challenges and there's dead time on air and you can do as many reads as you want you can rapid fire them if you like i will be a susceptible audience and
+
+[24:22 - 24:53]
+why haven't they figured out the league past timeouts when they just cut to the people dancing on the to try to get on the jumbotron for a few minutes you don't want that well i tell you my wife loves it and and it's very illuminating on different parts of the country how how desperate and excited they are to get on the jumbotron oh right so some of the coasts little little more restrained we get into some of the more fun cities people don't really get into it okay so we won't have a sense i was worried you're going coastal elite with this but you're saying people
+
+[24:53 - 25:24]
+are being too cool on the coast i think people are it's like some people are like oh look come on there's you go to some of the nba cities they're trying to get on they're doing dances they're shaking stuff great stuff next question's from brian greenway he had a nickname for khan knoepo he wants to come shotgun khan not only is it a cool nickname that that captures you know his shooting it also describes how khan rode in bill's car presumably bill didn't strap him into one of zoey's old car seats i'm
+
+[25:24 - 25:54]
+i'm glad people are still getting by which out of that by the way i didn't drive him to his house i drove him to his hotel sure it's an important distinction i i appreciate you clarifying on this point i would do it again the the only problem with this is you can't vote for it like you can't be the one to assign khan the bill oriented nickname it has to come from i can't from a dealer listener it's gotta come from the world it's gotta be arrogant parker writes in what's the most important three point shot of steph curry's career i figured you'd know couple that jumped to mind for him
+
+
+================================================================================
+CLIP 3 of 11
+------------------------------------------------------------
+Time: 35:29 - 37:00 (91s)
+Confidence: 0.4234
+Matching transcript segments: 4
+------------------------------------------------------------
+
+[34:59 - 35:29]
+injury concerns and yeah short term and long term how could you hope for more than this you can't really fun to watch too i think their games have been super entertaining josiah writes he had a nickname him and his buddies have started calling keonte george the speaker oh is this is this a keynote bit you've heard this this is this is a apparel of anyone who texts or types a lot about keonte george so that's what he said every time they're jazz fans every time they type keonte it gets changed to keynote
+
+[35:29 - 36:00]
+so they just call him the speaker so giannis is another one where this happens where it always starts in the apostrophe mhmm it's the yanni yanni apostrophe s and it's i thought eddie q was like a huge the guy that runs apple content i thought he was a huge nba fan i don't know how are they having these typos with the apple phone get it together come on apple my only concern about keonte george the speaker sounds like something deeply religious from a state where they just don't mess around with that stuff so like i i just wanna i wanna get clearance
+
+[36:00 - 36:30]
+that like we're in safe ground here you know okay ron from florida wants to know his which current nba teammates are most deserving of the reggie willis howie kendrick memorial award presented to two teammates who need to switch names he volunteers jeremy grant and donovan klingen mhmm klingen just looks like a jeremy to me big fan of the pod he does look like a jeremy so just walk me through this if shay gilgeous alexander and isaiah joe had just switched names eight years ago k and
+
+[36:30 - 37:00]
+it was michael jordan kobe bryant and isaiah joe is isaiah joe just a cooler name because we call shay s g a it has to be an acronym it's people spell the joe just wrong some people call it giljas yeah if he was just isaiah joe would that have increased his cool cool quota by like i don't know 10% isaiah joe is a pretty cool name but it's a pretty great name shae giljis alexander also has a nice ring to it so you think we're used to you think that shay works because it's so distinct i think it's so distinct my
+
+
+================================================================================
+CLIP 4 of 11
+------------------------------------------------------------
+Time: 37:00 - 38:30 (90s)
+Confidence: 0.3753
+Matching transcript segments: 4
+------------------------------------------------------------
+
+[36:30 - 37:00]
+it was michael jordan kobe bryant and isaiah joe is isaiah joe just a cooler name because we call shay s g a it has to be an acronym it's people spell the joe just wrong some people call it giljas yeah if he was just isaiah joe would that have increased his cool cool quota by like i don't know 10% isaiah joe is a pretty cool name but it's a pretty great name shae giljis alexander also has a nice ring to it so you think we're used to you think that shay works because it's so distinct i think it's so distinct my
+
+[37:00 - 37:30]
+my question is are we switching both names or just one name like is no you have to switch both it has to work for each guy so it's not jeremy klingen it's donovan klingen becomes jeremy grant and vice versa okay i went through all the rosters because i really enjoyed this question i couldn't find a perfect one i thought for sure i'd be like oh there's got it and i just couldn't i was like it was just way harder than i thought ben nielsen wants to add he asked are we officially done with artificially built basketball teams winning championships lebron era
+
+[37:30 - 38:00]
+heat 16 cavs 19 raptors what's that mean warriors just i guess like instead of homegrown it homegrown your your guys yeah either using free agency and slapping guys together making big some sort of big piece champions that are built more organically i'll say this i do think it would be way i think it'd be impossible now to do the 2011 heat because i think the league's too deep to just be like we're gonna have three guys and that's it
+
+[38:00 - 38:30]
+you have no chance in 2026 everybody there's so much depth free agency just doesn't work the same way either at all yeah so i think in a weird way it's a weird question but i think he's right i think it would be way harder to just be like like what the nets did with kd and and kyrie we're gonna use free agency we're gonna build an instant contender and blow i don't i don't know if you could do it the same way anymore i don't think you can do it that way but also i don't wanna pretend like the knicks drafted jalen brunson you know like there i think there are successful cases around the league right now like we're just and they traded
+
+
+================================================================================
+CLIP 5 of 11
+------------------------------------------------------------
+Time: 38:30 - 40:31 (121s)
+Confidence: 0.5138
+Matching transcript segments: 5
+------------------------------------------------------------
+
+[38:00 - 38:30]
+you have no chance in 2026 everybody there's so much depth free agency just doesn't work the same way either at all yeah so i think in a weird way it's a weird question but i think he's right i think it would be way harder to just be like like what the nets did with kd and and kyrie we're gonna use free agency we're gonna build an instant contender and blow i don't i don't know if you could do it the same way anymore i don't think you can do it that way but also i don't wanna pretend like the knicks drafted jalen brunson you know like there i think there are successful cases around the league right now like we're just and they traded
+
+[38:30 - 39:00]
+for towns and we're talking about the lakers as a potential contender that's not because of a guy they drafted like there's still really successful teams who are building them quote unquote artificially whatever that means alec d wants to know can life as a kings fan get any worse after twenty years of incompetence we've reached a new level worst record in the league now they're they're actually not worst record in the league but when he got this yes when he got this they they were the worst i would argue that might make it worse that they've they've gone like three and one in their last
+
+[39:00 - 39:31]
+four so maybe it's even worse yeah yeah yeah but he also wants to point out they have a top five payroll so the third worst record of the week at a top five payroll he's like how could we do worse than this and the answer is i don't really know this is really the james dolan this was the mid two thousand knicks where they would have you know the second biggest payroll in the league but they would go nineteen and sixty three i think when you can combine overspending with a terrible record and
+
+[39:31 - 40:01]
+really no assets that's that's peak can you do worse than that i think this is about as bad as it gets like the guys who are on the team no nobody wants in terms of like seeing your way out through a trade even if you're hoping for the draft again they just fell from the worst record in the league to like the third or fourth worst record in the league which with the flattened odds isn't as devastating but wouldn't guarantee you a top five pick so disaster could strike i i had no idea they were the fifth highest payroll that
+
+[40:01 - 40:31]
+is a fucking mess i he always said they're top five it might even be higher than five oh my god dan king wants to know cooper flagg celtics fandom and main ties i don't know if you saw the celtic game the the entire state of maine was at the celtics nabs game rooting for cooper flagg there's a bargaining chip that has not been discussed says dan king ace flagg ace's twin the twin brother who's at university of maine he's a freshman this year the university of maine wasn't very good but he was you know he plays
+
+
+================================================================================
+CLIP 6 of 11
+------------------------------------------------------------
+Time: 43:33 - 45:34 (121s)
+Confidence: 0.4710
+Matching transcript segments: 5
+------------------------------------------------------------
+
+[43:02 - 43:33]
+people believe so including me oh that's a great why isn't conspiracy built my why haven't i done a deep dive on that that's a great question yeah because they lined up really nicely with the lakers line up nicely with the lakers probably could've won that series if they'd been a little healthier than you know the 2004 pistons title that we hold up as this like beacon for all these other teams what if it just like literally had never happened because sam cassell wasn't quite so enthusiastic it's a great one so sam cassell's big balls dance swung the finals and they'll probably match up better with the pistons mine
+
+[43:33 - 44:03]
+is i've said this before it won't be a complete shocker to people but the 2,002 celtics who lost to the nets in six i think they could've could've thrown some haymakers at the o two lakers they really matched up with them well i know i this is the insane theory i'll bleed to your death they beat them in la i think two years in a row yeah the pierce antoine combo for some reason like the lakers just didn't really like playing with them they like going at kobe i don't know i just feel like we
+
+[44:03 - 44:33]
+could've thrown some punches you think the antoine walker era sells we're gonna rodney rogers kenny anderson i don't know are you okay is everyone here better than the nets okay oh two questions from justin from oregon we'll go quick the next weird career arc like the kevin garnett kobe bryant like the late prime that gets extended who's your best candidate for that do you have one i sent this to you i mean there i think there's some guys where it's like what if james harden just becomes
+
+[44:33 - 45:04]
+jose calderon for a while you know what if he just becomes a pure caretaker point guard like i'm gonna commit zero turnovers and have 12 assists a game and it's like i'm gonna i'm gonna shift into a totally different kind of player but i think he could do that if he wanted to so he's like fun old guy at a pickup game exactly but that's his nba career for like four years it's like just super fun to play with i think we talk about like oh the guys who can hang around a long time like the stephs or the lebrons for example but if you can just be like a point guard who can manage the game and not have to move that fast in bursts
+
+[45:04 - 45:34]
+i think you can play a while if you would like mine was karl anthony towns slowly morphing into a sam perkins early nineties situation i like that stretch five with subsides rebounding not a lot much else he's only making like 5,000,000 a year veteran experience and then his second question was five year panic trade which young superstar will eventually be involved in the next shocking we never thought he'd get traded to move like kd luca etcetera this is clearly
+
+
+================================================================================
+CLIP 7 of 11
+------------------------------------------------------------
+Time: 45:34 - 46:34 (60s)
+Confidence: 0.4419
+Matching transcript segments: 3
+------------------------------------------------------------
+
+[45:04 - 45:34]
+i think you can play a while if you would like mine was karl anthony towns slowly morphing into a sam perkins early nineties situation i like that stretch five with subsides rebounding not a lot much else he's only making like 5,000,000 a year veteran experience and then his second question was five year panic trade which young superstar will eventually be involved in the next shocking we never thought he'd get traded to move like kd luca etcetera this is clearly
+
+[45:34 - 46:04]
+paolo would be the answer for this i don't even know it'd be that shocking even though he's been playing better lately he's been playing better and he's been playing like super well in kind of a simplified context so i think that's the only thing about this question is of the young guys you would consider superstars i just really don't see any of them being moved you know like your your wembies your anthony edwards' your kades or tyrese halliburton's like that's not happening so yeah i think paolo the conversation will continue or franz if you prefer like however you suss those guys out i also just come
+
+[46:04 - 46:34]
+to accept i don't have a reason for this i don't have a mechanism that will force it to happen but i've come to accept that the sixers are just like not operating in a normal plane of existence and so if you told me someone panicked and traded tyrese maxey i'd be like yeah that sounds like a normal sixers thing to me very fair i would throw evan mobley in there too as the kind of like they trade him and then he puts on 15 pounds of muscle and all of a sudden goes up a level can can we go back for a second to the weird career arc
+
+
+================================================================================
+CLIP 8 of 11
+------------------------------------------------------------
+Time: 48:05 - 50:36 (151s)
+Confidence: 0.3954
+Matching transcript segments: 6
+------------------------------------------------------------
+
+[47:34 - 48:05]
+they have like little extender things so never thought of it great question see ten years ago that was like an espn the magazine feature and you just potted it out tim kehoe is furious this is from a hans i'm not going to pretend to pronounce his last name but it's o n g o n j a n w e s he said he found he had the exact same reaction to finding out bam scored 83 as he did to finding out luca got traded my brain breaks upon
+
+[48:05 - 48:35]
+realizing the realness of it i may never be the same what other nba moments were like that so this is basically the craziest wait what happened nba moments this century and i'm gonna offer you the luca trade bam 83 and the artest melee i think our it's almost like a three person mount rushmore i think that's really it i i think those are the three where the reaction was the same like wait thinking it was a joke yeah wait
+
+[48:35 - 49:06]
+what the pistons went the pacers went in the stands what happened i think those are the three and i don't think there's a fourth one the pistons and the bam one make particular sense because it's like they they're just happening in front of you and so there's kind of not a way you can challenge the re the reality of that situation part of the luke experience as we've all talked about was that initial wave of like this can't be right right like we couldn't wrap our heads around it to a degree that it seemed like it had to be made up the only other trade honestly that i remember having anything
+
+[49:06 - 49:36]
+resembling that level of reaction to was when allen iverson got traded to the nuggets and it was just like this feels so wrong on a fundamental level that they like sportscenter must be wrong like that they must be like misinformed about what has happened here but that doesn't compare to the luca trade that's what i'm hearing from you the trade rumors and like we had no idea it was coming the only it's a smaller one but i remember where it was when it happened it was a friday afternoon two days before the patriots lost to the giants in the super bowl and i was in arizona
+
+[49:36 - 50:06]
+with my dad and we're having a drink outdoors and all of a sudden on the ticker it flashed that the lakers had acquired pau gasol mhmm from memphis for kwame brown and crittendon and a number one pick and pau's then pretty fat brother and and he just he he turned out to be the gem of the trade and we were just like what else was in the trade and we're just watching the ticker and then the ticker would come and we this
+
+[50:06 - 50:36]
+was pre being able to find out stuff on your phone some textings people on my blackberry it's like there had to be more in the trade right and there just was nothing and that was a trade well you i think you've backdoored us into maybe the only other candidate which is the chris paul to the lakers trade getting canceled by david stern that's the fourth one you're right we got to i wrote back to back columns and back to back threes for grantland about that you're right the canceled trade is the fourth one truly trippy stuff see rob mahoney that's why you're the best two more and then
+
+
+================================================================================
+CLIP 9 of 11
+------------------------------------------------------------
+Time: 1:02:13 - 1:03:43 (90s)
+Confidence: 0.4002
+Matching transcript segments: 4
+------------------------------------------------------------
+
+[1:01:43 - 1:02:13]
+at somebody like darius garland and it's like that's kinda the old old school point guard that i grew up with and we just don't have a lot of these anymore and if anything there's more like zero guards and more like the russell westbrook types acuff's like an old school i can either set guys up or i can get my own thing and i think he can finish in traffic the defense is obviously not awesome but you know it's not like kyrie was an incredible defender but i the question for me is the size and do are we just moving into this world
+
+[1:02:13 - 1:02:43]
+with okc and san antonio and the celtics where everybody just wants bigger guards and that's why he's gonna fall back yeah i mean you hit it when we were talking about him this this weekend it's kinda like you can love a player and then but you have to run it through that that test that gauntlet that prism of like are they gonna be able to play kids san antonio and okc both of these teams i mean even you go into like the pistons a lot of these the the the celtics these teams have big physical switchy defenders at the in the in the backcourt and it's it's tough it's it's a tough time you
+
+[1:02:43 - 1:03:13]
+know the thing for me is i hear you hear a lot of comps when i watch acuff when i initially watched him my first thought was just like you could tell this guy has old point guards in his life because he just has like kyrie he just has this this sanity and this this sense for he sees levers within the game that other players don't see i've noticed like he can see like the defense is doing this if i do this if i do this action he'll tell us he's pointing all the time and tate and i have talked about this a lot i mean
+
+[1:03:13 - 1:03:43]
+this arkansas team i i do not know where they would be without him he is like the smartest player on their team obviously but he just kind of directs traffic they were one of the best transition teams and most efficient and prolific in the country and a lot of that is because of him he hits it ahead just relentlessly he never ever leaves that on the table for the comps though getting to that i mean i really don't see the derrick rose iverson incendiary speed type guys for him i see a cerebral game manager in the vein of a c p three except for
+
+
+================================================================================
+CLIP 10 of 11
+------------------------------------------------------------
+Time: 1:10:15 - 1:11:45 (90s)
+Confidence: 0.4462
+Matching transcript segments: 4
+------------------------------------------------------------
+
+[1:09:45 - 1:10:15]
+tips along the way add expert assist to talk to tax experts and let our experts do your taxes for you with expert full service tax act helps you find the deductions and credits you deserve so you can get them over with visit taxact.com to learn more conditions apply see taxact.com for details you know what's funny like watching out and i watched a lot of college this week i thought the product was really good college is awesome we've had no but we've had so many years where you know it
+
+[1:10:15 - 1:10:45]
+just seems so inferior to the nba in so many different ways i watched like arizona duke and arkansas ironically who somehow has lost eight times but those those are like real teams with like real teams offense great actions great secondary actions yeah you start one action now yeah now they have like multiple actions within one possession and a longer clock so it's high quality play yeah and then arizona basically is four first round picks and the guy who's if you didn't know anything you were like who's the best guy in this team
+
+[1:10:45 - 1:11:15]
+you would have said the point guard who is like gonna be a defensive round pick and i'm sure he's gonna end up on miami and he'll have like a ten year career it's always miami we always it's it's something deep seated about miami i can't believe it but it's it it just felt like a more mature product this year and i don't know if it was a product of it's just like this is a fluke awesome class or what what do you think oh what do you think tate well i was gonna say just kind of a mix of like the european guys who are coming in you also have this great freshman class which is getting compared to like the 1981 class right which yeah anytime
+
+[1:11:15 - 1:11:45]
+you're talking like mullins jordan elijah juan i mean that's a ridiculous group to be in you know conversation with yeah and then you also add in the fact that these guys who are veterans are coming back because they're getting paid to come back a guy like jaden bradley decides to come back and have more of a role after caleb love goes to the nba so i mean you mix those three pockets together you get a triple threat of good basketball and also the coaches have a little bit more leeway with these guys because it is professionalized at this point so i think you add it all together it's been a nice mix and i i've seen some people even pointing out the fact that they've enjoyed the
+
+
+================================================================================
+CLIP 11 of 11
+------------------------------------------------------------
+Time: 1:13:46 - 1:14:46 (60s)
+Confidence: 0.5517
+Matching transcript segments: 3
+------------------------------------------------------------
+
+[1:13:16 - 1:13:46]
+you know anything's possible but yeah i mean just the the depth of the talent getting guys to come back i think is kind of the driving force in my opinion in addition to a good class like you mentioned arizona like i was mentioned i was saying like karchinkov for them is like their what fifth dude and i think he could play ten years in the nba like he's a good player so when we look at big picture and i i wanna talk about burry's a little bit too in a second but when we look at big picture because the big the question you guys are gonna get over the next four days is who should i pick
+
+[1:13:46 - 1:14:16]
+who should i bet on who's your favorite who's your sleeper so we'll go who do you think is actually going to win who would be who who would surprise you the least if they won who is the tape i gotta take a deep breath before i say it duke is an indie team duke is won in 2010 duke is won in 2015 i do feel like this duke team got a really tough draw but i think it makes the story even better if they get out of greenville they lost in greenville last time they were there in 2017 lost to sindarius thornwell you
+
+[1:14:16 - 1:14:46]
+remember that south carolina team really tough that was fun yeah yeah that's a that's a place that they haven't had great history but if they survive greenville they'll have you know obviously north carolina fans pulling against them they had that in the acc tournament as well they're both in greenville this time but i just feel like this duke team especially with gongba being back they need the rim protection i think he will be back and help them with the rim protection and cam booser has never lost like this guy has never ever lost in his life and i do think that matters at some level and even in the acc tournament virginia had him on their heels and felt like wow virginia's gonna
+

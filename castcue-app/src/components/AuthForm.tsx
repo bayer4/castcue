@@ -60,7 +60,7 @@ export function AuthForm({ mode }: { mode: AuthMode }) {
       <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8">
         <h1 className="text-2xl font-semibold">{mode === "login" ? "Welcome back" : "Create account"}</h1>
         <p className="mt-2 text-sm text-[var(--text-secondary)]">
-          {mode === "login" ? "Sign in to access your CastCue feed." : "Create an account to start curating clips."}
+          {mode === "login" ? "Sign in to access your Freq feed." : "Create an account to start curating clips."}
         </p>
 
         <div className="mt-6">

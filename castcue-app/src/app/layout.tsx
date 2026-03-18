@@ -14,7 +14,7 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  title: "CastCue",
+  title: "Freq",
   description: "Podcast clips for topics you care about",
 };
 

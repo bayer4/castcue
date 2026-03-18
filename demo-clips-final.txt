@@ -1,0 +1,210 @@
+======================================================================
+[AI AGENTS] 10:07-12:08 (121s) conf=0.648
+Podcast: All-In with Chamath, Jason, Sacks & Friedberg
+Episode: Rewriting the Rules: The SEC & CFTC on Crypto, IPOs & the Future of American Markets
+Label: AI Agents and Updated Regulatory Framework
+Summary: Discussion of regulatory approach to AI agents in markets and the need to build new guardrails rather than apply old rules.
+----------------------------------------------------------------------
+[9:37] until now i think the approach has always been let's apply the old rules and regulations and and that's gonna work out and make sure that nobody can actually innovate and and create something new so we are embracing these opportunities in the markets we need to study them and make sure that we under
+
+[10:07] up guardrails so i do think there are unique risks when you have the ability for an agent to go out and deploy capital on on basically an autonomous basis and and that's gonna be something that our markets we've really really never seen before as regulators but that doesn't mean we have to stand in 
+
+[10:37] think there's any reason we can't have this technology as built here in america i agree with that and from from my point of view there are so many benefits to come from distributed ledger ledger technology for the financial services industry where we're right at the cusp of achieving t zero basicall
+
+[11:07] bumps you know to prevent fraud and things like that but for many and for some instruments it might not be possible but your discussion there 20 fourseven and all that i think is is really an exciting prospect liquidity perspective having the whole concept of best bid and offer what does that mean s
+
+[11:37] what mike and i are striving to do in harmonizing the approach of our two agencies is to and hopefully we'll get a statute out of the whole clarity act discussions going on in the hill right now that's really necessary to future proof what we're doing so there is no backsliding in the future but we 
+
+
+======================================================================
+[OPENAI] 27:17-29:48 (151s) conf=0.529
+Podcast: All-In with Chamath, Jason, Sacks & Friedberg
+Episode: Iran War, Oil Shock, Off Ramps, AI's Revenue Explosion and PR Nightmare
+Label: AI Valuation & Revenue Explosion
+Summary: Analysis of Anthropic and OpenAI's massive valuation increases and claims of $6 billion monthly AI revenue.
+----------------------------------------------------------------------
+[26:47] this thing up i'm in strong agreement and it is my hope too that he wraps it up quickly and that we don't have any more loss of life alright we'll keep discussing this ongoing breaking news story in the coming weeks but back to our zone of excellence ai and tech openai and anthropic are scaling reve
+
+[27:17] levels here are the reports and i believe your investors in both these companies brad anthropic hit a $14,000,000,000 run rate last month february that means they have grown revenue from 1,000,000,000 to 14,000,000,000 in fourteen months they have 12 x year over year they're valued at a meager 380,0
+
+[27:47] from 2,000,000,000 to 20,000,000,000 in twenty four months they're valued at 840,000,000,000 last month and man it looks like sam altman has dario in the review mirror he could get lapped any moment lots of debate where did you find this what the hell is this that one i made that this is dario closi
+
+[28:18] the bend this fast but he's right behind apparently and they're winning obviously the business to business side of the business j curve on these companies is insane $250 500,000,000,000 who knows what's get gets invested before these companies reach profitability brad but you're invested in these tw
+
+[28:48] information for us to have quick question for you number one what's a better buy here yeah anthropic at three eighty openai at 08:40 and then i think people wanna know if these companies are gonna go public what you if you think they should go public what is the chance of that happening take those q
+
+[29:18] important question this year right was would ai revenue show up and just sixty days ago ninety days ago there was tremendous skepticism no way all of these infrastructure investments were going to pay off there's no incremental revenue coming out of ai including many of our friends but in february w
+
+
+======================================================================
+[AI AGENTS] 1:05:38-1:07:10 (92s) conf=0.475
+Podcast: All-In with Chamath, Jason, Sacks & Friedberg
+Episode: Iran War, Oil Shock, Off Ramps, AI's Revenue Explosion and PR Nightmare
+Label: Frontier Model Development & Industry Consolidation
+Summary: Discussion of newly formed groups like those from Carpathi working on frontier AI models and the concentration of AI development.
+----------------------------------------------------------------------
+[1:05:08] sure how you factor this in at altimeter into your thinking but this seems to me to be a massive headwind against the two big bets you have all of these open source models we started running them picking up about 85% of our tokens right now and every startup i know is saying we are standing up our l
+
+[1:05:38] project from carpathi that came out this weekend for people who don't know we now have a group of tinkerers who are setting up their open clause and now setting up a large language models and now trying to train them with this auto research tool this seems like a parallel track that could be materia
+
+[1:06:08] they're doing some like planning you know with the frontier labs and then they're kind of doing the execution if you will with the open source models so they're running an ensemble of model strategy but here's what i think is more impressive we have incredible open source models nearly on the fronti
+
+[1:06:39] and that's in the face jason of all this open source usage so what does it tell me it tells me that the tam is dramatically bigger than any of us think that it is and that you know when we when we look back on this period you know that will be the big takeaway it's a takeaway with uber the takeaway 
+
+
+======================================================================
+[NBA DRAFT] 10:45-12:47 (122s) conf=0.495
+Podcast: The Bill Simmons Podcast
+Episode: A Rollicking NBA Mailbag and March Madness Storylines With Rob Mahoney, Tate Frazier, and J. Kyle Mann
+Label: Spurs' Draft Strategy and Asset Building
+Summary: Examination of San Antonio's successful rebuilding approach through draft picks and prospect development.
+----------------------------------------------------------------------
+[10:15] get any positive momentum in any direction and that's in a season where they just drafted vijay edgecomb who's awesome the mccain trade as as relatively minor as that was did not help damming the fact that he went to okc was immediately good i actually thought they got a lot back for him they got th
+
+[10:45] there anyone else in that category for you where if the spurs call or if the nuggets call or if the knicks call don't you think brad stevens is at that level now he's like cherry picking these you know weird role players like even somebody like keita was just kinda released by sacramento i'd be nerv
+
+[11:15] of late first and like early second round picks coming home to bruce like they just have cracked this stuff hugo having like one of the 10 greatest plus minuses of all time it's a classic this is from harriet didn't say where she's from have we reached a weird place with these scoring streaks so thi
+
+[11:46] she's confused i'm a little confused by it too but i think this is what we do with regular season streaks because i went back and i looked wilt when he had his long streak he had yeah i don't know six playoff games or something but he never went under the 20 so it actually would have rolled over but
+
+[12:16] and i never knew what the record was and you held it and then you're telling me it's a streak yeah i'm just like okay i guess that's a streak but it's not you know like the 33 game lakers streak that's a streak i know what that is people remember it people have been talking about it forever but did 
+
+
+======================================================================
+[NBA DRAFT] 38:30-40:31 (121s) conf=0.514
+Podcast: The Bill Simmons Podcast
+Episode: A Rollicking NBA Mailbag and March Madness Storylines With Rob Mahoney, Tate Frazier, and J. Kyle Mann
+Label: 2026 Draft Class Assessment
+Summary: Analysis of the 2026 NBA draft class and whether current contenders can maintain success.
+----------------------------------------------------------------------
+[38:00] you have no chance in 2026 everybody there's so much depth free agency just doesn't work the same way either at all yeah so i think in a weird way it's a weird question but i think he's right i think it would be way harder to just be like like what the nets did with kd and and kyrie we're gonna use 
+
+[38:30] for towns and we're talking about the lakers as a potential contender that's not because of a guy they drafted like there's still really successful teams who are building them quote unquote artificially whatever that means alec d wants to know can life as a kings fan get any worse after twenty years
+
+[39:00] four so maybe it's even worse yeah yeah yeah but he also wants to point out they have a top five payroll so the third worst record of the week at a top five payroll he's like how could we do worse than this and the answer is i don't really know this is really the james dolan this was the mid two tho
+
+[39:31] really no assets that's that's peak can you do worse than that i think this is about as bad as it gets like the guys who are on the team no nobody wants in terms of like seeing your way out through a trade even if you're hoping for the draft again they just fell from the worst record in the league t
+
+[40:01] is a fucking mess i he always said they're top five it might even be higher than five oh my god dan king wants to know cooper flagg celtics fandom and main ties i don't know if you saw the celtic game the the entire state of maine was at the celtics nabs game rooting for cooper flagg there's a barga
+
+
+======================================================================
+[NBA DRAFT] 1:07:45-1:08:45 (60s) conf=0.585
+Podcast: The Bill Simmons Podcast
+Episode: A Rollicking NBA Mailbag and March Madness Storylines With Rob Mahoney, Tate Frazier, and J. Kyle Mann
+Label: March Madness Impact on Draft Prospects
+Summary: Discussion of how March Madness performance will affect draft stock for players.
+----------------------------------------------------------------------
+[1:07:45] he's probably the fastest player in the draft i would say he reminds me of maxey at times and the fact that he just blitzes blitzes blitzes he's a really good passer i think it speaks to kingston's you know credit character credit though that he came into a team that had two returning backcourt play
+
+[1:08:15] last second are worth it it feels so good and have you noticed all the smoothest plays are served ice cold just like michelob ultra that's why michelob ultra it's one of the reasons it's the official beer partner of the nba or maybe it's because it's a superior light beer with a smooth refreshing ta
+
+
+======================================================================
+[NBA DRAFT] 1:17:48-1:19:18 (90s) conf=0.565
+Podcast: The Bill Simmons Podcast
+Episode: A Rollicking NBA Mailbag and March Madness Storylines With Rob Mahoney, Tate Frazier, and J. Kyle Mann
+Label: Draft Stock Changes and Player Development
+Summary: Discussion of how tournament performance affects draft stock for various players.
+----------------------------------------------------------------------
+[1:17:18] games too with him so that that he's probably we he's like what ninth ninth on the list now kyle just above that eight eight ninth range yeah people have had him in that like nine through or like eight through 15 range but i i look at him and i'm just there there are major kaysen wallace 2020 like t
+
+[1:17:48] reaching for the shiny thing with going for these upside guards like the mikel's or the kingston's or you know keaton waggler's shooting or acuff and then you just got this his out high outcomes might not be as like tempting as some of those guys but he's just steady and he plays for a team that's t
+
+[1:18:18] i'm excited to see what happens with them next two weeks because i was texting you guys about how we always do this with the draft where you just rank the guys like with the potential but when we actually get to the draft and it gets to a team like utah is picking fifth then it's they're just not go
+
+[1:18:48] really like what could do i would call him a kimba candidate so i would throw them out there i think gonzaga i would watch out for just in the west i know that we love arizona but gonzaga's fallen off like the national conversation a little bit and this team mark few i don't know how many more years
+
+
+======================================================================
+[NBA DRAFT] 1:32:55-1:34:26 (91s) conf=0.541
+Podcast: The Bill Simmons Podcast
+Episode: A Rollicking NBA Mailbag and March Madness Storylines With Rob Mahoney, Tate Frazier, and J. Kyle Mann
+Label: Amen Thompson and Draft Projections
+Summary: Discussion of Amen Thompson's potential as a basketball player and draft pick.
+----------------------------------------------------------------------
+[1:32:25] be my guy here's his name amen right bill right you that's your guy right yeah i don't i don't wanna be mean with college players but that's the only one there's there's 10 guys and then there's a drop off so i've done all my work on the 10 guys and amen's the only one i don't get he was the ford fr
+
+[1:32:55] he's gotten stronger at least like because of tennessee and the way they play like he's had to get stronger so he's gotten a little bit more physical but i'm with you his balance is so bad like i i kinda go back to balance like he feels like he falls down a lot and gets pushed around a lot which is 
+
+[1:33:26] six eight wings and kaysan wallace and derrick white and hugo gonzalez and just on and on that and then wendy waiting for you in the paint and if in my head it seems inconceivable that you could handle that kind of level of basketball it'd be really tough for me to take you with the top 10 pick so y
+
+[1:33:56] skinny guys that are face up guys and they they make me nervous the the illinois kid though the fact that he wasn't a top 100 high school recruit and he has a chance to be a seven like basically a top seven pick i think that's like the craziest story i can remember in a while kyle is that when's the
+
+
+======================================================================
+[NBA DRAFT] 1:28:03-1:28:35 (32s) conf=0.544
+Podcast: The Bill Simmons Podcast
+Episode: The Bam Backlash, Kawhi’s Heater, East vs. West, and SGA vs. Jokic, With Tim Legler
+Label: College Basketball Prospects
+Summary: Brief mention of exciting college basketball prospects in recent draft classes.
+----------------------------------------------------------------------
+[1:27:33] on that level do and shoot it at a clip that at least gets north of 36% 38% like get up in that range with with his defense and the way he physically attacks the rim i think castle is another one of those guys like there's no telling how good this guy could be in two or three years well you're betti
+
+[1:28:03] two drafts in the world i know i know you're too busy with nba to follow college but there's some crazy guy not even beyond the top four there's some crazy scores in this draft and all kinds of things coming so it's pretty fun last question did the sga jokic game and sga basically turning into kobe 
+
+
+======================================================================
+[IRAN] 12:09-15:11 (182s) conf=0.538
+Podcast: All-In with Chamath, Jason, Sacks & Friedberg
+Episode: Graham Allison on the Global Realignment: Iran, China, Israel, Greenland
+Label: Regional Implications and Nuclear Proliferation Risks
+Summary: Exploration of how the Iran-Israel conflict affects regional stability, nuclear weapons development, and comparisons to past failed interventions.
+----------------------------------------------------------------------
+[11:39] it's always a treat to have you on here nice to see you it's just amazing to have you on here and to give us this time if things were to go extremely well and iran went from a monarchy to a dictatorship and now in this third act here in modern day to a democracy and you actually had a democracy with
+
+[12:09] monarchies you have one other i guess democracy in the region in israel but this could be extraordinary if it was a democracy but what would that mean to the to the global chessboard well it's a good question i mean if this could occur it would be spectacular even i think but i would say this is way
+
+[12:39] i remember in iraq after bush failed to find nuclear weapons which was the initial i'd say somewhat cracked up rationale for our going into iraq condi rice who was the secretary gave a speech about well how wonderful it'll be when iraq is a democracy and market economy quote radiating stability thro
+
+[13:09] stretch i would be very happy with a regime there that simply was not about building nuclear weapons was not about building missiles that threaten the us and our friends and allies in the region and not about supporting proxies and if it's a pretty cruel regime unfortunately that's unfortunate for t
+
+[13:39] know i remember cyrus and i remember the peloponnesian war i remember you know this is a fantastic culture in history they've been hijacked by a terrible terrible group of people and if those people can be somehow ousted you know wonderful for iranian people and wonderful for the world i i if i were
+
+[14:09] in the noise extremely difficult but if i were betting it it'll end up that the guys with the guns will in some version be the next iteration and if they're tamer and less determined to threaten our interest will this have been worth it well i can we'll have to look at you know over the longer run i
+
+[14:40] is that they're unpredictable and that they have many unanticipated consequences now i think as we watch what's happening now and see what impact does that have on oil and gas prices predictable so you can see and going and going well what impact does that have on other countries huge so the number 
+
+
+======================================================================
+[IRAN] 16:43-19:45 (182s) conf=0.585
+Podcast: All-In with Chamath, Jason, Sacks & Friedberg
+Episode: Graham Allison on the Global Realignment: Iran, China, Israel, Greenland
+Label: Scenarios for Iran Conflict Resolution
+Summary: Discussion of multiple possible endgames for the Iran-Israel conflict and the risks of escalation versus diplomatic solutions.
+----------------------------------------------------------------------
+[16:13] of the attack i was at the the defense department and i gave them a list of 11 things that i would do and be capable of doing if i were playing the iranian hand and they seem to be i mean i i i hardly even wanna say out loud but they they act like a paper tiger do you think there's more damage that 
+
+[16:43] is twice as many people 100,000,000 versus 50,000,000 four times the land area a much better equipped military and arguably the military system the regime is embedded in every aspect of industry so the more successful the united states is in dismantling the iranian regime and as was advised by condo
+
+[17:13] publicly stated it's time to finish them off it's time to go all the way etcetera does that not then leave a country with no infrastructure no leadership a 100,000,000 people in tatters and that's the classic breeding ground for some of these extremist groups to seize control and seize power and we 
+
+[17:44] that i mean you could do four or five different scenarios for how this might conceivably end it could end up being an extended civil war in in iran among the various national groups even some of them possibly seceding so again fairly chaotic look like syria plus okay it could look like iran or afgha
+
+[18:14] on the number of people and how did that work out so i i i say that i'm i'm a small c conservative and kinda think history is not always no certainly not the only guy but it's a good place to start oh i'm i i would say nervous yeah is it too late to have a venezuelan outcome where we've taken out th
+
+[18:44] it seems like we may be a little too far gone now in iran and that to take this all the way might be very difficult to manage alright is it too late if i were again we're all in the dark and all the uncertainty so back to point one but after that i would say compass erratic impulsive but he has some
+
+[19:14] economy is a crucial element of that that's part of the framing of the of the china relationship the impact of this on the economy is already evident okay and could become more evident the public opinion again i think he's i saw today in the journal that he's sent higgs higgsmith out to sell the war
+
+
+======================================================================
+[IRAN] 21:17-23:50 (153s) conf=0.486
+Podcast: All-In with Chamath, Jason, Sacks & Friedberg
+Episode: Graham Allison on the Global Realignment: Iran, China, Israel, Greenland
+Label: Domestic Political Consequences and MAGA Criticism
+Summary: Discussion of conservative skepticism toward the Iran policy and concerns from MAGA supporters about Trump being captured by Israeli interests.
+----------------------------------------------------------------------
+[20:46] destroyed and that'll be an interesting struggle to see how that goes earlier trump demonstrated that when he thought it was in american interest he was prepared to pull bb's chain so we'll see this is i think in before we move out of the mena region a topic that's coming up there's obviously no sup
+
+[21:17] are are high on their list and he's been pretty clear hey we're not gonna put boots on the ground and then there's this antisemitic underpinning that's happening in america that's become pretty acute and you had rubio who we mentioned earlier say hey we did this because the israelis were going in an
+
+[21:48] people in the maga party who believe trump has betrayed them and that he's captured by the israeli government in some way and he's doing their bidding i'm not saying that that's my perspective but that is a an undertone that we're seeing and that's something new in our lifetime i think it it certain
+
+[22:18] people whom i know mostly and respect mostly in israel are the national security barons the people who've been the chief of staff or the head of mossad or the head of shin bet or the people that work in that in those structures and they believe that bibi is actually destroying the ben gurion's israe
+
+[22:48] is you know anti semitic but he's been i think very clear and very courageous in pointing out that what bb's doing to israel's democracy is really destroying it and the impact of that on jewish kids in america i mean i say this on campus where they wanna be proud of israel they they deserve to be pr
+
+[23:19] crazy right wing settlers and their activities in the in the occupied west bank or they look at some of the activities in gaza or they look at now the kind of unlimited war without any pro any even attempt to make arguments about proportionality and just say wait a minute that's not the country i wa
+
+
