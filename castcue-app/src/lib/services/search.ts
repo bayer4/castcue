@@ -30,6 +30,11 @@ interface TopicSegmentRow {
   embedding: number[];
 }
 
+interface TopicSegmentCandidate extends TopicRange {
+  label: string;
+  summary: string;
+}
+
 // ============================================================
 // Alias Generation
 // ============================================================
@@ -98,6 +103,32 @@ function extractDistinguishingKeywords(topic: string): string[] {
   ]);
 
   return words.filter((word) => word.length >= 2 && !genericWords.has(word));
+}
+
+function extractIntentKeywords(topic: string): string[] {
+  const normalized = topic.toLowerCase().trim();
+  const words = normalized.split(/\s+/).filter((word) => word.length > 0);
+  const keywords = new Set(words);
+
+  if (normalized.includes("draft")) {
+    for (const synonym of ["prospect", "lottery", "pick", "mock", "selection"]) {
+      keywords.add(synonym);
+    }
+  }
+
+  if (normalized.includes("trade")) {
+    for (const synonym of ["deal", "swap", "acquire", "package"]) {
+      keywords.add(synonym);
+    }
+  }
+
+  if (normalized.includes("free agent") || normalized.includes("free agency")) {
+    for (const synonym of ["signing", "contract", "unrestricted"]) {
+      keywords.add(synonym);
+    }
+  }
+
+  return [...keywords];
 }
 
 function parseEmbedding(raw: unknown): number[] {
@@ -578,6 +609,100 @@ SUMMARY: {one-line summary of what's discussed}`;
   return refined;
 }
 
+async function verifyTopicSegmentsWithLLM(
+  topic: string,
+  candidates: TopicSegmentCandidate[]
+): Promise<TopicRange[]> {
+  type AnthropicMessageResponse = {
+    content?: Array<{ type?: string; text?: string }>;
+  };
+
+  if (candidates.length === 0) return [];
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return candidates.map(({ startMs, endMs, occurrences, confidence }) => ({
+      startMs,
+      endMs,
+      occurrences,
+      confidence,
+    }));
+  }
+
+  const segments = candidates.map(
+    (candidate, index) =>
+      `[${index}] Label: "${candidate.label}" | Summary: "${candidate.summary}"`
+  );
+  const prompt = `You are a podcast topic relevance judge. For each segment below, determine if it is specifically about "${topic}" — not just tangentially related to the same domain.
+
+Segments:
+${segments.join("\n")}
+
+For each segment, respond with ONLY the segment number and YES or NO:
+[0] YES
+[1] NO`;
+
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        messages: [{ role: "user", content: prompt }],
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(
+        `[search:v5][llm] topic="${topic}" relevance check failed with status ${response.status}; falling back to unverified candidates`
+      );
+      return candidates.map(({ startMs, endMs, occurrences, confidence }) => ({
+        startMs,
+        endMs,
+        occurrences,
+        confidence,
+      }));
+    }
+
+    const rawBody = await response.text();
+    const data = JSON.parse(rawBody) as AnthropicMessageResponse;
+    const responseText =
+      data.content?.[0]?.type === "text" ? (data.content[0].text ?? "") : "";
+
+    const verified: TopicRange[] = [];
+    for (let i = 0; i < candidates.length; i++) {
+      const pattern = new RegExp(`\\[${i}\\]\\s*(YES|NO)`, "i");
+      const match = responseText.match(pattern);
+      const include = match?.[1]?.toUpperCase() === "YES";
+      if (include) {
+        const candidate = candidates[i];
+        verified.push({
+          startMs: candidate.startMs,
+          endMs: candidate.endMs,
+          occurrences: candidate.occurrences,
+          confidence: candidate.confidence,
+        });
+      }
+    }
+
+    return verified;
+  } catch (error) {
+    console.warn(
+      `[search:v5][llm] topic="${topic}" relevance check errored; falling back to unverified candidates`,
+      error
+    );
+    return candidates.map(({ startMs, endMs, occurrences, confidence }) => ({
+      startMs,
+      endMs,
+      occurrences,
+      confidence,
+    }));
+  }
+}
+
 // ============================================================
 // Main Search Function
 // ============================================================
@@ -758,8 +883,8 @@ export async function searchEpisodeWithTimestamps(
   }
 
   const topicEmbedding = await embedTopicQuery(topic);
-  const distinguishingKeywords = extractDistinguishingKeywords(topic);
-  const matches: TopicRange[] = [];
+  const intentKeywords = extractIntentKeywords(topic);
+  const candidates: TopicSegmentCandidate[] = [];
 
   for (const segment of topicSegments) {
     if (segment.embedding.length === 0) {
@@ -771,9 +896,9 @@ export async function searchEpisodeWithTimestamps(
       continue;
     }
 
-    if (distinguishingKeywords.length > 0) {
+    if (intentKeywords.length > 0) {
       const searchableText = `${segment.label} ${segment.summary}`.toLowerCase();
-      const hasKeyword = distinguishingKeywords.some((keyword) =>
+      const hasKeyword = intentKeywords.some((keyword) =>
         searchableText.includes(keyword)
       );
       if (!hasKeyword) {
@@ -781,18 +906,19 @@ export async function searchEpisodeWithTimestamps(
       }
     }
 
-    matches.push({
+    candidates.push({
       startMs: segment.start_ms,
       endMs: segment.end_ms,
       occurrences: 1,
       confidence: similarity,
+      label: segment.label,
+      summary: segment.summary,
     });
   }
 
-  return {
-    ranges: matches,
-    method: "semantic",
-  };
+  const llmFiltered = await verifyTopicSegmentsWithLLM(topic, candidates);
+  const merged = aggressiveMerge(llmFiltered, SEARCH_CONFIG.MERGE_GAP_MS);
+  return { ranges: merged, method: "semantic" };
 }
 
 // Keep the old searchEpisode for backward compatibility

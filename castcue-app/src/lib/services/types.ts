@@ -120,7 +120,7 @@ export const SEARCH_CONFIG = {
   BASE_THRESHOLD_SINGLE: 0.4, // For single-word topics
   BASE_THRESHOLD_MULTI: 0.4, // For multi-word topics (aliases help)
   Z_SCORE_THRESHOLD: 0.5, // Segment must be 0.5 std dev above mean
-  TOPIC_SEGMENT_THRESHOLD: 0.35, // Minimum cosine sim for precomputed topic segments
+  TOPIC_SEGMENT_THRESHOLD: 0.50, // Minimum cosine sim for precomputed topic segments
 
   // Context padding
   CONTEXT_SEGMENTS_BEFORE: 1, // Include N segments before hit for context
