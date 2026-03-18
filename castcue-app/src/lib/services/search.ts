@@ -101,6 +101,50 @@ function generateAliases(topic: string): string[] {
   return [...aliases];
 }
 
+function extractDistinguishingKeywords(topic: string): string[] {
+  const words = topic
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter((w) => w.length > 0);
+
+  if (words.length <= 1) return [];
+
+  const genericWords = new Set([
+    "draft",
+    "trade",
+    "game",
+    "play",
+    "player",
+    "team",
+    "season",
+    "news",
+    "update",
+    "report",
+    "analysis",
+    "discussion",
+    "talk",
+    "latest",
+    "new",
+    "big",
+    "top",
+    "best",
+    "worst",
+    "first",
+    "the",
+    "a",
+    "an",
+    "of",
+    "in",
+    "on",
+    "for",
+    "and",
+    "or",
+  ]);
+
+  return words.filter((word) => word.length >= 2 && !genericWords.has(word));
+}
+
 function parseEmbedding(raw: unknown): number[] {
   if (Array.isArray(raw)) {
     return raw.filter((v): v is number => typeof v === "number");
@@ -142,6 +186,51 @@ async function loadEpisodeSegments(
   }));
 }
 
+async function loadEpisodeMetadata(episodeId: string): Promise<{
+  episodeTitle?: string;
+  podcastTitle?: string;
+}> {
+  const supabase = createAdminClient();
+  const { data: episode, error: episodeError } = await supabase
+    .from("episodes")
+    .select("title, podcast_id")
+    .eq("id", episodeId)
+    .maybeSingle();
+
+  if (episodeError) {
+    console.warn(
+      `[search:v3] failed to load episode metadata for ${episodeId}: ${episodeError.message}`
+    );
+    return {};
+  }
+
+  if (!episode) {
+    return {};
+  }
+
+  let podcastTitle: string | undefined;
+  if (episode.podcast_id) {
+    const { data: podcast, error: podcastError } = await supabase
+      .from("podcasts")
+      .select("title")
+      .eq("id", episode.podcast_id)
+      .maybeSingle();
+
+    if (podcastError) {
+      console.warn(
+        `[search:v3] failed to load podcast metadata for ${episodeId}: ${podcastError.message}`
+      );
+    } else if (typeof podcast?.title === "string") {
+      podcastTitle = podcast.title;
+    }
+  }
+
+  return {
+    episodeTitle: typeof episode.title === "string" ? episode.title : undefined,
+    podcastTitle,
+  };
+}
+
 // ============================================================
 // LLM Verification Layer
 // ============================================================
@@ -159,7 +248,9 @@ async function verifyClipsWithLLM(
     confidence: number;
     sampleText: string;
   }>,
-  topic: string
+  topic: string,
+  episodeTitle?: string,
+  podcastTitle?: string
 ): Promise<
   Array<{
     startMs: number;
@@ -168,30 +259,9 @@ async function verifyClipsWithLLM(
     confidence: number;
   }>
 > {
-  type VerificationRange = {
-    startMs: number;
-    endMs: number;
-    occurrences: number;
-    confidence: number;
-  };
   type AnthropicMessageResponse = {
     content?: Array<{ type?: string; text?: string }>;
   };
-  const stripSampleText = (
-    ranges: Array<{
-      startMs: number;
-      endMs: number;
-      occurrences: number;
-      confidence: number;
-      sampleText: string;
-    }>
-  ): VerificationRange[] =>
-    ranges.map((range) => ({
-      startMs: range.startMs,
-      endMs: range.endMs,
-      occurrences: range.occurrences,
-      confidence: range.confidence,
-    }));
 
   if (candidateRanges.length === 0) return [];
 
@@ -212,6 +282,9 @@ Rules:
 - Watch out for domain confusion: if the topic specifies a sport or league (e.g. "NBA draft"), content about a DIFFERENT sport or league (e.g. NFL draft) is NOT a match even though they share words like "draft".
 - Respond YES only if the topic is clearly a main focus of the conversation. When in doubt, say NO.
 
+Podcast: "${podcastTitle ?? "Unknown"}"
+Episode: "${episodeTitle ?? "Unknown"}"
+
 Segments:
 ${segments.join("\n\n")}
 
@@ -223,78 +296,93 @@ For each segment, respond with ONLY the segment number and YES or NO, one per li
   console.log(prompt);
   console.log(`[search:v3][llm] topic="${topic}" prompt_end`);
 
-  try {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY || "",
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 200,
-        messages: [{ role: "user", content: prompt }],
-      }),
-    });
-    console.log(`[search:v3][llm] topic="${topic}" status=${response.status}`);
-    const rawBody = await response.text();
-    console.log(`[search:v3][llm] topic="${topic}" response_body_start`);
-    console.log(rawBody);
-    console.log(`[search:v3][llm] topic="${topic}" response_body_end`);
+  const MAX_RETRIES = 2;
 
-    if (!response.ok) {
-      // If LLM verification fails, fall back to returning all candidates
-      console.warn(
-        `LLM verification failed (${response.status}), returning all candidates`
-      );
-      return stripSampleText(candidateRanges);
-    }
-
-    let data: AnthropicMessageResponse;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      data = JSON.parse(rawBody) as AnthropicMessageResponse;
-    } catch (parseError) {
-      console.warn(`[search:v3][llm] topic="${topic}" failed to parse JSON body`, parseError);
-      return stripSampleText(candidateRanges);
-    }
-    const text =
-      data.content?.[0]?.type === "text" ? data.content[0].text : "";
-    const responseText = text ?? "";
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 200,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      console.log(`[search:v3][llm] topic="${topic}" attempt=${attempt} status=${response.status}`);
+      const rawBody = await response.text();
+      console.log(`[search:v3][llm] topic="${topic}" response_body_start`);
+      console.log(rawBody);
+      console.log(`[search:v3][llm] topic="${topic}" response_body_end`);
 
-    // Parse YES/NO responses
-    const verified: Array<{
-      startMs: number;
-      endMs: number;
-      occurrences: number;
-      confidence: number;
-    }> = [];
-
-    for (let i = 0; i < candidateRanges.length; i++) {
-      const pattern = new RegExp(`\\[${i}\\]\\s*(YES|NO)`, "i");
-      const match = responseText.match(pattern);
-      const parsed = match?.[1]?.toUpperCase() ?? "PARSE_MISS";
-      const include = match ? parsed === "YES" : false;
-      console.log(
-        `[search:v3][llm] topic="${topic}" segment=${i} parsed=${parsed} include=${include}`
-      );
-
-      if (include) {
-        verified.push({
-          startMs: candidateRanges[i].startMs,
-          endMs: candidateRanges[i].endMs,
-          occurrences: candidateRanges[i].occurrences,
-          confidence: candidateRanges[i].confidence,
-        });
+      if (!response.ok) {
+        console.warn(
+          `LLM verification failed (${response.status}), dropping all candidates to avoid false positives`
+        );
+        return [];
       }
-    }
 
-    return verified;
-  } catch (err) {
-    // On any error, fall back to returning all candidates
-    console.warn("LLM verification error, returning all candidates:", err);
-    return stripSampleText(candidateRanges);
+      let data: AnthropicMessageResponse;
+      try {
+        data = JSON.parse(rawBody) as AnthropicMessageResponse;
+      } catch (parseError) {
+        console.warn(`[search:v3][llm] topic="${topic}" failed to parse JSON body`, parseError);
+        return [];
+      }
+      const text =
+        data.content?.[0]?.type === "text" ? data.content[0].text : "";
+      const responseText = text ?? "";
+
+      const verified: Array<{
+        startMs: number;
+        endMs: number;
+        occurrences: number;
+        confidence: number;
+      }> = [];
+
+      for (let i = 0; i < candidateRanges.length; i++) {
+        const pattern = new RegExp(`\\[${i}\\]\\s*(YES|NO)`, "i");
+        const match = responseText.match(pattern);
+        const parsed = match?.[1]?.toUpperCase() ?? "PARSE_MISS";
+        const include = match ? parsed === "YES" : false;
+        console.log(
+          `[search:v3][llm] topic="${topic}" segment=${i} parsed=${parsed} include=${include}`
+        );
+
+        if (include) {
+          verified.push({
+            startMs: candidateRanges[i].startMs,
+            endMs: candidateRanges[i].endMs,
+            occurrences: candidateRanges[i].occurrences,
+            confidence: candidateRanges[i].confidence,
+          });
+        }
+      }
+
+      return verified;
+    } catch (err) {
+      console.warn(
+        `[search:v3][llm] topic="${topic}" attempt=${attempt}/${MAX_RETRIES} network error:`,
+        err
+      );
+      if (attempt < MAX_RETRIES) {
+        await new Promise((r) => setTimeout(r, 1000 * attempt));
+        continue;
+      }
+      // All retries exhausted — return empty to avoid false positives.
+      // Wrong clips are worse than missing clips.
+      console.warn(
+        `[search:v3][llm] topic="${topic}" all retries failed, dropping candidates to prevent false positives`
+      );
+      return [];
+    }
   }
+
+  return [];
 }
 
 // ============================================================
@@ -313,6 +401,8 @@ export async function searchEpisodeWithTimestamps(
   episodeId: string,
   topic: string
 ): Promise<{ ranges: TopicRange[]; method: "semantic" | "keyword" }> {
+  const { episodeTitle, podcastTitle } = await loadEpisodeMetadata(episodeId);
+
   // 1. Load all segments
   const segments = await loadEpisodeSegments(episodeId);
   console.log(`[search:v3] topic="${topic}" step=segments_loaded count=${segments.length}`);
@@ -368,8 +458,24 @@ export async function searchEpisodeWithTimestamps(
     (r) => r.endMs - r.startMs >= SEARCH_CONFIG.MIN_RANGE_MS
   );
 
-  // 10. LLM verification - collect sample text for each range
-  const rangesWithText = filtered.map((range) => {
+  // 10. Hard keyword validation for multi-word topics.
+  const distinguishingKeywords = extractDistinguishingKeywords(topic);
+  const keywordValidated =
+    distinguishingKeywords.length === 0
+      ? filtered
+      : filtered.filter((range) => {
+          const rangeHits = hits.filter(
+            (h) => h.start_ms >= range.startMs && h.end_ms <= range.endMs
+          );
+          const rangeText = rangeHits.map((h) => h.text).join(" ").toLowerCase();
+          return distinguishingKeywords.some((kw) => rangeText.includes(kw));
+        });
+  console.log(
+    `[search:v3] topic="${topic}" step=after_keyword_validation ranges=${keywordValidated.length} keywords=${JSON.stringify(distinguishingKeywords)}`
+  );
+
+  // 11. LLM verification - collect sample text for each range
+  const rangesWithText = keywordValidated.map((range) => {
     // Use original hit segments (not padded context) within this range.
     // Then take highest-similarity hits to focus Claude on the core topic discussion.
     const topRangeHits = hits
@@ -392,14 +498,21 @@ export async function searchEpisodeWithTimestamps(
 
   // Only run LLM verification if we have an API key and candidates
   if (process.env.ANTHROPIC_API_KEY && rangesWithText.length > 0) {
-    const verified = await verifyClipsWithLLM(rangesWithText, topic);
+    const verified = await verifyClipsWithLLM(
+      rangesWithText,
+      topic,
+      episodeTitle,
+      podcastTitle
+    );
     console.log(`[search:v3] topic="${topic}" step=after_llm_verification ranges=${verified.length}`);
     return { ranges: verified, method };
   }
 
   // No API key - return without LLM verification
-  console.log(`[search:v3] topic="${topic}" step=after_llm_verification ranges=${filtered.length} skipped=true`);
-  return { ranges: filtered, method };
+  console.log(
+    `[search:v3] topic="${topic}" step=after_llm_verification ranges=${keywordValidated.length} skipped=true`
+  );
+  return { ranges: keywordValidated, method };
 }
 
 // Keep the old searchEpisode for backward compatibility

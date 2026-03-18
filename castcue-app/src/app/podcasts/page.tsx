@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useGeneration } from "@/components/GenerationContext";
 
 type Podcast = {
   id: string;
@@ -51,10 +52,10 @@ const popularPodcasts = [
       "https://is1-ssl.mzstatic.com/image/thumb/Podcasts221/v4/9a/d3/19/9ad31912-0b5a-a16e-2d7c-9fd074698b9c/mza_8994222203629500925.jpg/600x600bb.jpg",
   },
   {
-    title: "Lex Fridman Podcast",
-    rssUrl: "https://lexfridman.com/feed/podcast/",
+    title: "The Adam Schefter Podcast",
+    rssUrl: "https://feeds.megaphone.fm/ESP3620980398",
     imageUrl:
-      "https://is1-ssl.mzstatic.com/image/thumb/Podcasts115/v4/3e/e3/9c/3ee39c89-de08-47a6-7f3d-3849cef6d255/mza_16657851278549137484.png/600x600bb.jpg",
+      "https://is1-ssl.mzstatic.com/image/thumb/Podcasts211/v4/cd/55/4b/cd554b64-876b-a202-5a2f-78ef8ef9af5d/mza_3423454303676993330.jpg/600x600bb.jpg",
   },
   {
     title: "This Week in AI",
@@ -101,6 +102,15 @@ export default function PodcastsPage() {
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<ItunesPodcastResult[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const { isGenerating, activePodcastId, queuedIds, setQueuedEpisodeCount, enqueueGeneration } = useGeneration();
+
+  useEffect(() => {
+    const count = queuedIds.reduce((sum, id) => {
+      const pod = podcasts.find((p) => p.id === id);
+      return sum + (pod?.readyCount ?? 0);
+    }, 0);
+    setQueuedEpisodeCount(count);
+  }, [queuedIds, podcasts, setQueuedEpisodeCount]);
 
   const fetchPodcasts = useCallback(async () => {
     const response = await fetch("/api/podcasts");
@@ -178,9 +188,20 @@ export default function PodcastsPage() {
       return;
     }
 
+    const payload = (await response.json()) as { podcast?: { id: string } };
     setBusyRssUrl(null);
     await loadPodcasts();
     setOptimisticFollows((prev) => { const next = new Set(prev); next.delete(targetRssUrl); return next; });
+
+    // Auto-ingest disabled for demo — use per-podcast "Generate" button instead.
+    // if (payload.podcast?.id) {
+    //   void fetch("/api/episodes/ingest", {
+    //     method: "POST",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ podcastId: payload.podcast.id }),
+    //   }).then(() => loadPodcasts()).catch(() => {});
+    // }
+    void payload;
   }
 
   async function processEpisodes(podcastId?: string) {
@@ -202,6 +223,11 @@ export default function PodcastsPage() {
     } finally {
       setProcessingIds((prev) => { const next = new Set(prev); next.delete(key); return next; });
     }
+  }
+
+  function generateForPodcast(podcastId: string) {
+    setError(null);
+    enqueueGeneration(podcastId);
   }
 
   useEffect(() => {
@@ -275,13 +301,30 @@ export default function PodcastsPage() {
         </p>
         <h3 className="text-xl font-semibold tracking-tight">Find podcasts by name</h3>
         <p className="mt-1 text-sm text-[var(--text-tertiary)]">Search Apple Podcasts and follow in one click.</p>
-        <div className="mt-4 flex gap-2">
+        <div className="relative mt-4">
           <input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Type podcast name (min 3 characters)"
-            className="w-full rounded-xl border border-[var(--border)] bg-[var(--elevated)] px-4 py-3 text-base text-[var(--text-primary)] outline-none ring-[var(--accent)] transition focus:ring-1"
+            className="w-full rounded-xl border border-[var(--border)] bg-[var(--elevated)] px-4 py-3 pr-10 text-base text-[var(--text-primary)] outline-none ring-[var(--accent)] transition focus:ring-1"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                setSearchQuery("");
+                setSearchResults([]);
+                setDebouncedQuery("");
+                (e.currentTarget.previousElementSibling as HTMLInputElement)?.focus();
+              }}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-[var(--text-tertiary)] transition hover:text-[var(--text-primary)]"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
+                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+              </svg>
+            </button>
+          )}
         </div>
         <p className="mt-2 text-xs text-[var(--text-tertiary)]">
           Results come from Apple Podcasts.
@@ -340,107 +383,129 @@ export default function PodcastsPage() {
         )}
       </section>
 
-      <section className="mb-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold">Suggested</h3>
-          <button
-            onClick={() => processEpisodes()}
-            disabled={processingIds.has("_all")}
-            className="btn-ghost disabled:opacity-50"
-          >
-            {processingIds.has("_all") ? "Processing..." : "Process All Pending"}
-          </button>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {popularPodcasts.map((podcast) => {
-            const subscribed = subscribedSet.has(podcast.rssUrl);
-            const busy = busyRssUrl === podcast.rssUrl;
-            return (
-              <article
-                key={podcast.rssUrl}
-                className="clip-card rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3"
-              >
-                <div className="mb-3 flex items-center gap-3">
-                  <div className="relative h-16 w-16 overflow-hidden rounded-lg bg-[var(--elevated)]">
-                    <Image src={podcast.imageUrl} alt={podcast.title} fill className="object-cover" sizes="64px" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="line-clamp-2 text-sm font-semibold">{podcast.title}</p>
-                    <p className="mt-1 text-xs text-[var(--text-tertiary)]">Curated source</p>
-                  </div>
-                </div>
-                {!loading && (
-                  <button
-                    disabled={busy || subscribed}
-                    onClick={() => subscribeByRssUrl(podcast.rssUrl)}
-                    className={`w-full ${subscribed ? "btn-ghost" : "btn-primary"} justify-center disabled:opacity-50`}
-                  >
-                    {subscribed ? "Following" : busy ? "Following..." : "Follow"}
-                  </button>
-                )}
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
       {error ? (
         <p className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
           {error}
         </p>
       ) : null}
 
+      {/* ── Your Podcasts ── */}
       {loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
         </div>
-      ) : podcasts.length === 0 ? (
-        <div className="animate-fade-in rounded-xl border border-dashed border-[var(--border)] py-16 text-center text-[var(--text-secondary)]">
-          Follow podcasts to start finding conversations.
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {podcasts.map((podcast) => (
-            <article
-              key={podcast.id}
-              className="clip-card flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-[var(--elevated)]">
-                  {podcast.image_url ? (
-                    <Image src={podcast.image_url} alt="" fill className="object-cover" sizes="48px" />
-                  ) : null}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate font-semibold">{podcast.title ?? "Untitled podcast"}</p>
-                  <p className="truncate text-xs text-[var(--text-secondary)]">
-                    {podcast.episodeCount} episodes · {podcast.readyCount} ready · {podcast.processingCount} processing
-                    · {podcast.pendingCount} pending
-                  </p>
-                  {podcast.failedCount > 0 ? (
-                    <p className="mt-1 text-xs text-red-300">{podcast.failedCount} failed</p>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => processEpisodes(podcast.id)}
-                  disabled={processingIds.has(podcast.id) || processingIds.has("_all")}
-                  className="btn-ghost px-3 py-1.5 text-xs disabled:opacity-50"
+      ) : podcasts.length > 0 ? (
+        <section className="mb-10">
+          <div className="mb-3">
+            <h3 className="text-lg font-semibold">Your Podcasts</h3>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {podcasts.map((podcast) => {
+              const isGeneratingThisPodcast = isGenerating && activePodcastId === podcast.id;
+              const isQueued = queuedIds.includes(podcast.id);
+              return (
+                <article
+                  key={podcast.id}
+                  className="clip-card rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3"
                 >
-                  {processingIds.has(podcast.id) || processingIds.has("_all") ? "Processing..." : "Process Episodes"}
-                </button>
-                <button
-                  onClick={() => unsubscribe(podcast.id)}
-                  className="btn-ghost px-3 py-1.5 text-xs"
-                >
-                  Unfollow
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
-      )}
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--elevated)]">
+                      {podcast.image_url ? (
+                        <Image src={podcast.image_url} alt="" fill className="object-cover" sizes="48px" />
+                      ) : null}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="line-clamp-2 text-sm font-semibold">{podcast.title ?? "Untitled podcast"}</p>
+                      {(podcast.pendingCount > 0 || podcast.processingCount > 0) ? (
+                        <p className="mt-0.5 truncate text-xs text-[var(--text-tertiary)]">Setting up...</p>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(podcast.pendingCount > 0 || podcast.processingCount > 0) ? (
+                      <div className="flex flex-1 items-center gap-2 text-xs text-[var(--text-tertiary)]">
+                        <div className="h-3 w-3 animate-spin rounded-full border border-[var(--accent)] border-t-transparent" />
+                        Scanning episodes...
+                      </div>
+                    ) : podcast.failedCount > 0 ? (
+                      <button
+                        onClick={() => processEpisodes(podcast.id)}
+                        disabled={processingIds.has(podcast.id)}
+                        className="flex-1 text-left text-xs text-red-400 transition hover:text-red-300"
+                      >
+                        {processingIds.has(podcast.id) ? "Retrying..." : "Some episodes failed · Retry"}
+                      </button>
+                    ) : null}
+                    <button
+                      onClick={() => generateForPodcast(podcast.id)}
+                      disabled={isGeneratingThisPodcast || isQueued || podcast.readyCount === 0}
+                      className="btn-primary flex-1 justify-center gap-1.5 text-xs disabled:opacity-80"
+                    >
+                      {isGeneratingThisPodcast ? (
+                        <>
+                          <span className="h-3 w-3 animate-spin rounded-full border border-white/90 border-t-transparent" />
+                          Scanning...
+                        </>
+                      ) : isQueued ? (
+                        <>
+                          <span className="h-2 w-2 rounded-full bg-white/60" />
+                          Queued
+                        </>
+                      ) : (
+                        "Generate (demo)"
+                      )}
+                    </button>
+                    <button
+                      onClick={() => unsubscribe(podcast.id)}
+                      className="btn-ghost justify-center text-xs"
+                    >
+                      Unfollow
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
+      {/* ── Discover ── */}
+      {(() => {
+        const unfollowedSuggestions = popularPodcasts.filter((p) => !subscribedSet.has(p.rssUrl));
+        if (unfollowedSuggestions.length === 0) return null;
+        return (
+          <section className="mb-8">
+            <h3 className="mb-3 text-lg font-semibold">Discover</h3>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {unfollowedSuggestions.map((podcast) => {
+                const busy = busyRssUrl === podcast.rssUrl;
+                return (
+                  <article
+                    key={podcast.rssUrl}
+                    className="clip-card rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3"
+                  >
+                    <div className="mb-3 flex items-center gap-3">
+                      <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-[var(--elevated)]">
+                        <Image src={podcast.imageUrl} alt={podcast.title} fill className="object-cover" sizes="48px" />
+                      </div>
+                      <p className="line-clamp-2 text-sm font-semibold">{podcast.title}</p>
+                    </div>
+                    {!loading && (
+                      <button
+                        disabled={busy}
+                        onClick={() => subscribeByRssUrl(podcast.rssUrl)}
+                        className="btn-primary w-full justify-center disabled:opacity-50"
+                      >
+                        {busy ? "Following..." : "Follow"}
+                      </button>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })()}
     </section>
   );
 }

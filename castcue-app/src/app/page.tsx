@@ -44,6 +44,13 @@ const SparkleIcon = () => (
     <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z" />
   </svg>
 );
+const MoreIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <circle cx="12" cy="5" r="1.5" />
+    <circle cx="12" cy="12" r="1.5" />
+    <circle cx="12" cy="19" r="1.5" />
+  </svg>
+);
 
 function HomeContent() {
   const router = useRouter();
@@ -57,6 +64,8 @@ function HomeContent() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [clipProgressMs, setClipProgressMs] = useState(0);
   const [activeTopicFilter, setActiveTopicFilter] = useState<string>("All");
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   const loadPlaylist = useCallback(async () => {
     const response = await fetch("/api/playlist");
@@ -123,6 +132,28 @@ function HomeContent() {
     () => visibleClips.reduce((sum, c) => sum + Math.max(0, c.endMs - c.startMs), 0),
     [visibleClips],
   );
+
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const onClickOutside = (e: globalThis.MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [openMenuId]);
+
+  async function deleteClip(clipId: number) {
+    setOpenMenuId(null);
+    if (currentClipId === clipId) {
+      audioRef.current?.pause();
+      setIsPlaying(false);
+      setCurrentClipId(null);
+    }
+    setClips((prev) => prev.filter((c) => c.id !== clipId));
+    await fetch(`/api/playlist/clips/${clipId}`, { method: "DELETE" });
+  }
 
   async function markAsListened(clipId: number) {
     setClips((prev) => prev.map((clip) => (clip.id === clipId ? { ...clip, listened: true } : clip)));
@@ -468,22 +499,27 @@ function HomeContent() {
           return (
             <article
               key={clip.id}
-              className={`clip-card flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 ${isActive ? "clip-card--active" : ""}`}
+              className={`clip-card group flex items-center gap-3 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3 ${isActive ? "clip-card--active" : ""}`}
               style={{ animationDelay: `${i * 30}ms` }}
               onClick={() => toggleClip(clip)}
               role="button"
               tabIndex={0}
             >
-              {/* Track number */}
+              {/* Track number / play on hover (Spotify-style) */}
               <div className="flex w-6 shrink-0 items-center justify-center">
                 {isClipPlaying ? (
                   <div className="equalizer">
                     <span /><span /><span />
                   </div>
                 ) : (
-                  <span className={`text-sm tabular-nums ${isActive ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}>
-                    {i + 1}
-                  </span>
+                  <>
+                    <span className={`text-sm tabular-nums group-hover:hidden ${isActive ? "text-[var(--accent)]" : "text-[var(--text-tertiary)]"}`}>
+                      {i + 1}
+                    </span>
+                    <span className="hidden text-[var(--text-primary)] group-hover:flex">
+                      <PlayIcon size={14} />
+                    </span>
+                  </>
                 )}
               </div>
 
@@ -519,13 +555,40 @@ function HomeContent() {
                 )}
               </div>
 
-              {/* Play button */}
-              <button
-                className={`play-btn ${isClipPlaying ? "play-btn--active" : ""}`}
-                onClick={(e) => { e.stopPropagation(); toggleClip(clip); }}
-              >
-                {isClipPlaying ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
-              </button>
+              {/* Three-dot menu */}
+              <div className="relative shrink-0">
+                <button
+                  className="flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-tertiary)] opacity-0 transition hover:bg-[var(--elevated)] hover:text-[var(--text-primary)] group-hover:opacity-100"
+                  style={openMenuId === clip.id ? { opacity: 1 } : undefined}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpenMenuId(openMenuId === clip.id ? null : clip.id);
+                  }}
+                >
+                  <MoreIcon size={16} />
+                </button>
+                {openMenuId === clip.id && (
+                  <div
+                    ref={menuRef}
+                    className="absolute right-0 top-full z-50 mt-1 min-w-[140px] overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-[var(--elevated)] py-1 shadow-xl"
+                  >
+                    <button
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-[var(--text-secondary)] transition hover:bg-[var(--surface)] hover:text-red-400"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void deleteClip(clip.id);
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18" />
+                        <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                      </svg>
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
             </article>
           );
         })}

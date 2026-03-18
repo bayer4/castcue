@@ -56,10 +56,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 function AppShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isGenerating, statusMessage, startGeneration } = useGeneration();
+  const { isGenerating, progress, queuedEpisodeCount, completedEpisodes, startGeneration } = useGeneration();
 
   const isAuthRoute = authRoutes.has(pathname);
-  const showGlobalGenerateButton = pathname !== "/";
+  const showGlobalGenerateButton = pathname !== "/" && pathname !== "/podcasts";
 
   async function handleLogout() {
     const supabase = createClient();
@@ -92,9 +92,29 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
             Conversations that matter
           </p>
           {isGenerating ? (
-            <div className="mt-3 flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--elevated)] px-2 py-1.5 text-[11px] text-[var(--text-secondary)]">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
-              <span>Scanning podcasts...</span>
+            <div className="mt-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--elevated)] px-2 py-1.5">
+              <div className="flex items-center gap-2 text-[11px] text-[var(--text-secondary)]">
+                <span className="h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
+                <span>Scanning podcasts...</span>
+              </div>
+              {progress && progress.total > 0 ? (() => {
+                const combinedTotal = completedEpisodes + progress.total + queuedEpisodeCount;
+                const combinedCurrent = completedEpisodes + progress.current;
+                const pct = Math.round((combinedCurrent / combinedTotal) * 100);
+                return (
+                  <>
+                    <div className="mt-1.5 h-[3px] w-full overflow-hidden rounded-full bg-[var(--border)]">
+                      <div
+                        className="h-full rounded-full bg-[var(--accent)] transition-all duration-500 ease-out"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                    <p className="mt-1 text-right text-[10px] text-[var(--text-tertiary)]">
+                      {combinedCurrent} of {combinedTotal} episodes
+                    </p>
+                  </>
+                );
+              })() : null}
             </div>
           ) : null}
         </div>
@@ -137,7 +157,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         {showGlobalGenerateButton ? (
           <div className="mb-4 flex justify-end">
             <button
-              onClick={startGeneration}
+              onClick={() => startGeneration()}
               disabled={isGenerating}
               className="inline-flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm font-medium text-[var(--text-secondary)] transition hover:border-[var(--accent)] hover:text-[var(--text-primary)] disabled:cursor-default disabled:opacity-70"
             >
@@ -148,20 +168,6 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
               )}
               {isGenerating ? "Scanning..." : "Generate Clips"}
             </button>
-          </div>
-        ) : null}
-        {statusMessage ? (
-          <div
-            className={`mb-4 flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface)] px-3 py-2 text-sm text-[var(--text-secondary)] ${
-              isGenerating ? "animate-pulse" : ""
-            }`}
-          >
-            {isGenerating ? (
-              <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
-            ) : (
-              <span className="h-2 w-2 rounded-full bg-[var(--accent)]" />
-            )}
-            <span>{statusMessage}</span>
           </div>
         ) : null}
         {children}

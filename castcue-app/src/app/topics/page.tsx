@@ -105,17 +105,14 @@ export default function TopicsPage() {
         </p>
       </header>
 
-      <form onSubmit={createTopic} className="mb-6 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] p-3">
-        <p className="mb-2 text-xs uppercase tracking-wide text-[var(--text-tertiary)]">Add topic</p>
-        <div className="flex gap-2">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. AI agents, NBA playoffs, OpenAI"
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none ring-[var(--accent)] transition focus:ring-1"
-          />
-          <button className="btn-primary">Add</button>
-        </div>
+      <form onSubmit={createTopic} className="mb-6 flex items-center gap-2">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. AI agents, NBA playoffs"
+          className="w-56 rounded-lg border border-[var(--border)] bg-[var(--elevated)] px-3 py-2 text-sm text-[var(--text-primary)] outline-none ring-[var(--accent)] transition focus:ring-1"
+        />
+        <button className="btn-primary">Add</button>
       </form>
 
       {error ? (
@@ -141,30 +138,26 @@ export default function TopicsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="flex flex-wrap gap-2">
           {topics.map((topic) => (
-            <article
+            <span
               key={topic.id}
-              className="clip-card flex items-center justify-between rounded-xl border border-[var(--border-subtle)] bg-[var(--surface)] px-4 py-3"
+              className="group flex items-center gap-1.5 rounded-full border border-[var(--border-subtle)] bg-[var(--surface)] py-1.5 pl-3 pr-1.5 text-sm font-medium transition hover:border-[var(--accent)]"
             >
-              <div>
-                <div className="mb-1 flex items-center gap-2">
-                  <span className="topic-pill">{topic.name}</span>
-                  {topic.clipCount > 0 && <span className="new-badge">{topic.clipCount} clips</span>}
-                </div>
-                <p className="text-sm text-[var(--text-secondary)]">
-                  {topic.clipCount === 0
-                    ? "No clips yet"
-                    : `${topic.clipCount} conversation${topic.clipCount === 1 ? "" : "s"} found`}
-                </p>
-              </div>
+              {topic.name}
+              {topic.clipCount > 0 && (
+                <span className="text-xs text-[var(--text-tertiary)]">({topic.clipCount})</span>
+              )}
               <button
                 onClick={() => deleteTopic(topic.id)}
-                className="btn-ghost px-3 py-1.5 text-xs"
+                className="ml-0.5 flex h-5 w-5 items-center justify-center rounded-full text-[var(--text-tertiary)] transition hover:bg-red-500/20 hover:text-red-400"
+                aria-label={`Delete ${topic.name}`}
               >
-                Delete
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <path d="M18 6 6 18M6 6l12 12" />
+                </svg>
               </button>
-            </article>
+            </span>
           ))}
         </div>
       )}
