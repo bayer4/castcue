@@ -108,7 +108,15 @@ export const SEARCH_CONFIG = {
   // Context padding
   CONTEXT_SEGMENTS_BEFORE: 1, // Include N segments before hit for context
   LEAD_PAD_MS: 10000, // 10s lead-in padding
-  TRAIL_PAD_MS: 10000, // 10s trail-out padding
+  TRAIL_PAD_MS: 20000, // 20s trail-out padding
+
+  // Trailing continuation — once inside a confirmed topic conversation,
+  // keep extending the clip while segments stay above this lower bar.
+  CONTINUATION_THRESHOLD: 0.25,
+  MAX_CONTINUATION_MS: 300000, // Cap extension at 5 minutes
+
+  // Merge gap — how far apart two ranges can be and still stitch together
+  MERGE_GAP_MS: 90000, // 90s gap tolerance
 
   // Result filtering
   MIN_RANGE_MS: 8000, // Minimum 8s for a result to be useful

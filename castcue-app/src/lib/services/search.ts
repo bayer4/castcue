@@ -445,8 +445,12 @@ export async function searchEpisodeWithTimestamps(
   // 6. Build ranges with actual timestamps
   const rawRanges = buildTimestampRanges(segments, hits);
 
-  // 7. Aggressive merge - combine ranges within 60s of each other
-  const merged = aggressiveMerge(rawRanges, 60000);
+  // 6b. Trailing continuation — extend ranges while the conversation stays on-topic
+  const continued = trailingContinuation(rawRanges, segments, hits, similarities);
+  console.log(`[search:v3] topic="${topic}" step=after_continuation ranges=${continued.length} extended=${continued.filter((r, i) => r.endMs > rawRanges[i]?.endMs).length}`);
+
+  // 7. Aggressive merge - combine ranges within gap tolerance of each other
+  const merged = aggressiveMerge(continued, SEARCH_CONFIG.MERGE_GAP_MS);
   console.log(`[search:v3] topic="${topic}" step=after_merging ranges=${merged.length}`);
 
   // 8. Filter by minimum hit density (at least 2 hits per range)
@@ -723,6 +727,57 @@ function buildTimestampRanges(
     occurrences: r.hitCount,
     confidence: r.hitCount > 0 ? r.totalSimilarity / r.hitCount : 0.5,
   }));
+}
+
+// ============================================================
+// Trailing Continuation
+// ============================================================
+
+/**
+ * Once we've confirmed a conversation about a topic, the bar for
+ * *staying* in that conversation should be lower than the bar for
+ * *detecting* a new one. This scans forward from the last hit in
+ * each range and extends the range while segments remain above
+ * CONTINUATION_THRESHOLD.
+ */
+function trailingContinuation(
+  ranges: TopicRange[],
+  segments: SegmentRow[],
+  hits: SegmentWithSimilarity[],
+  similarities: Map<number, number>,
+): TopicRange[] {
+  if (ranges.length === 0 || segments.length === 0) return ranges;
+
+  const segmentByIndex = new Map(segments.map((s) => [s.segment_index, s]));
+  const maxSegIndex = Math.max(...segments.map((s) => s.segment_index));
+
+  return ranges.map((range) => {
+    const rangeHits = hits.filter(
+      (h) => h.start_ms >= range.startMs && h.end_ms <= range.endMs,
+    );
+    if (rangeHits.length === 0) return range;
+
+    const lastHitIdx = Math.max(...rangeHits.map((h) => h.segment_index));
+    const originalEndMs = range.endMs;
+    let extendedEndMs = range.endMs;
+
+    for (let idx = lastHitIdx + 1; idx <= maxSegIndex; idx++) {
+      const seg = segmentByIndex.get(idx);
+      if (!seg) break;
+
+      if (seg.start_ms - originalEndMs > SEARCH_CONFIG.MAX_CONTINUATION_MS) break;
+
+      const sim = similarities.get(idx) ?? 0;
+      if (sim < SEARCH_CONFIG.CONTINUATION_THRESHOLD) break;
+
+      extendedEndMs = seg.end_ms + SEARCH_CONFIG.TRAIL_PAD_MS;
+    }
+
+    if (extendedEndMs > range.endMs) {
+      return { ...range, endMs: extendedEndMs };
+    }
+    return range;
+  });
 }
 
 // ============================================================
