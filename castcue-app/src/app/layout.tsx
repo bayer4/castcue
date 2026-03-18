@@ -23,10 +23,10 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "Freq",
-    description: "Conversations that matter",
+    description: "Follow topics, not podcasts.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "Freq — Conversations that matter",
@@ -36,8 +36,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Freq",
-    description: "Conversations that matter",
-    images: ["/og-image.png"],
+    description: "Follow topics, not podcasts.",
+    images: ["/og-image.jpg"],
   },
 };
 
