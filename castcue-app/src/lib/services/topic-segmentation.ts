@@ -84,7 +84,7 @@ export function buildCompressedOutline(segments: SegmentLike[]): string {
       const timestamp = formatMsToMinuteSecond(startMs);
       const speakerText =
         typeof segment.speaker === "number" ? ` (Speaker ${segment.speaker})` : "";
-      const text = truncateText(segment.text ?? "", 100);
+      const text = truncateText(segment.text ?? "", 200);
       return `[${timestamp}]${speakerText} ${text}`.trim();
     })
     .join("\n");
@@ -113,8 +113,12 @@ Rules:
 - Conversations can be short (1-2 minutes) or very long (30+ minutes).
 - When the hosts shift to a new subject, that's a new segment.
 - Brief tangents (under 1 minute) within a larger conversation should NOT be separate segments.
+- IMPORTANT: Set the start time to when the hosts FIRST introduce or transition into the topic — capture the setup and introduction, not just when they're deep into it. If a host says "let's talk about X" or "next topic", that moment is the start.
+- Set the end time to when the hosts clearly move on to a different subject, or when a natural conclusion/wrap-up of the topic occurs.
+- Prefer slightly too early start times over slightly too late — it's better to include a few seconds of transition than to cut off the beginning of a conversation.
 - Use the timestamps exactly as they appear in the outline.
 - Speaker changes can signal topic shifts but not always.
+- Label each segment with a specific, descriptive name (e.g. "AI Agents in Financial Markets" not just "AI Discussion").
 
 Transcript outline:
 ${outline}
@@ -133,7 +137,7 @@ Return ONLY the JSON array, no other text.`;
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
+        model: "claude-sonnet-4-20250514",
         max_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
       }),
