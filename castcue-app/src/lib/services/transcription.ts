@@ -4,6 +4,7 @@ type DeepgramWord = {
   word: string;
   start: number;
   end: number;
+  speaker?: number;
 };
 
 type DeepgramResponse = {
@@ -46,5 +47,6 @@ export async function transcribeEpisode(audioUrl: string): Promise<TranscriptWor
     text: word.word,
     start: Math.round(word.start * 1000),
     end: Math.round(word.end * 1000),
+    speaker: word.speaker,
   }));
 }

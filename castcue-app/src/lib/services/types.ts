@@ -19,6 +19,7 @@ export interface TranscriptWord {
   text: string;
   start: number; // milliseconds
   end: number; // milliseconds
+  speaker?: number;
 }
 
 /**
@@ -41,6 +42,7 @@ export interface Segment {
   text: string;
   startMs: number;
   endMs: number;
+  speaker?: number;
   embedding?: number[]; // 1536-dim from text-embedding-3-small
 }
 
@@ -62,6 +64,15 @@ export interface TopicRange {
   endMs: number;
   occurrences: number; // How many segment hits merged into this range
   confidence: number; // Average similarity score
+}
+
+export interface TopicSegment {
+  id: number;
+  episodeId: string;
+  label: string;
+  summary: string;
+  startMs: number;
+  endMs: number;
 }
 
 export interface StructuralBoundary {
@@ -109,6 +120,7 @@ export const SEARCH_CONFIG = {
   BASE_THRESHOLD_SINGLE: 0.4, // For single-word topics
   BASE_THRESHOLD_MULTI: 0.4, // For multi-word topics (aliases help)
   Z_SCORE_THRESHOLD: 0.5, // Segment must be 0.5 std dev above mean
+  TOPIC_SEGMENT_THRESHOLD: 0.35, // Minimum cosine sim for precomputed topic segments
 
   // Context padding
   CONTEXT_SEGMENTS_BEFORE: 1, // Include N segments before hit for context

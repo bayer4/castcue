@@ -21,6 +21,15 @@ interface SegmentWithSimilarity extends SegmentRow {
   similarity: number;
 }
 
+interface TopicSegmentRow {
+  id: number;
+  label: string;
+  summary: string;
+  start_ms: number;
+  end_ms: number;
+  embedding: number[];
+}
+
 // ============================================================
 // Alias Generation
 // ============================================================
@@ -126,6 +135,32 @@ async function loadEpisodeSegments(
     id: Number(row.id),
     segment_index: Number(row.segment_index),
     text: String(row.text ?? ""),
+    start_ms: Number(row.start_ms ?? 0),
+    end_ms: Number(row.end_ms ?? 0),
+    embedding: parseEmbedding(row.embedding),
+  }));
+}
+
+async function loadEpisodeTopicSegments(
+  episodeId: string
+): Promise<TopicSegmentRow[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("topic_segments")
+    .select("id, label, summary, start_ms, end_ms, embedding")
+    .eq("episode_id", episodeId)
+    .order("start_ms", { ascending: true });
+
+  if (error) {
+    throw new Error(
+      `Failed to load topic segments for episode ${episodeId}: ${error.message}`
+    );
+  }
+
+  return (data ?? []).map((row) => ({
+    id: Number(row.id),
+    label: String(row.label ?? ""),
+    summary: String(row.summary ?? ""),
     start_ms: Number(row.start_ms ?? 0),
     end_ms: Number(row.end_ms ?? 0),
     embedding: parseEmbedding(row.embedding),
@@ -548,14 +583,14 @@ SUMMARY: {one-line summary of what's discussed}`;
 // ============================================================
 
 /**
- * Search for topic discussions in an episode using:
+ * Legacy v4 chain:
  * 1. Sliding window similarity
  * 2. Adaptive thresholds (percentile-based)
  * 3. Aggressive merging (60s gap tolerance)
  * 4. Minimum hit density filtering
  * 5. LLM verification to kill false positives
  */
-export async function searchEpisodeWithTimestamps(
+async function _legacySearchV4(
   episodeId: string,
   topic: string
 ): Promise<{ ranges: TopicRange[]; method: "semantic" | "keyword" }> {
@@ -711,6 +746,53 @@ export async function searchEpisodeWithTimestamps(
     `[search:v4] topic="${topic}" step=after_llm_refine ranges=${snapped.length} skipped=true`
   );
   return { ranges: snapped, method };
+}
+
+export async function searchEpisodeWithTimestamps(
+  episodeId: string,
+  topic: string
+): Promise<{ ranges: TopicRange[]; method: "semantic" | "keyword" }> {
+  const topicSegments = await loadEpisodeTopicSegments(episodeId);
+  if (topicSegments.length === 0) {
+    return _legacySearchV4(episodeId, topic);
+  }
+
+  const topicEmbedding = await embedTopicQuery(topic);
+  const distinguishingKeywords = extractDistinguishingKeywords(topic);
+  const matches: TopicRange[] = [];
+
+  for (const segment of topicSegments) {
+    if (segment.embedding.length === 0) {
+      continue;
+    }
+
+    const similarity = cosine(topicEmbedding, segment.embedding);
+    if (similarity < SEARCH_CONFIG.TOPIC_SEGMENT_THRESHOLD) {
+      continue;
+    }
+
+    if (distinguishingKeywords.length > 0) {
+      const searchableText = `${segment.label} ${segment.summary}`.toLowerCase();
+      const hasKeyword = distinguishingKeywords.some((keyword) =>
+        searchableText.includes(keyword)
+      );
+      if (!hasKeyword) {
+        continue;
+      }
+    }
+
+    matches.push({
+      startMs: segment.start_ms,
+      endMs: segment.end_ms,
+      occurrences: 1,
+      confidence: similarity,
+    });
+  }
+
+  return {
+    ranges: matches,
+    method: "semantic",
+  };
 }
 
 // Keep the old searchEpisode for backward compatibility

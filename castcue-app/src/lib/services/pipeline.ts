@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { computeStructuralBoundaries } from "./boundaries";
 import { embedBatch } from "./embedding";
 import { sliceIntoSegments } from "./segmentation";
+import { buildCompressedOutline, detectTopicSegments } from "./topic-segmentation";
 import { transcribeEpisode } from "./transcription";
 
 function asPgVector(values: number[]): string {
@@ -81,6 +82,7 @@ export async function processEpisode(episodeId: string) {
       text: segment.text,
       start_ms: segment.startMs,
       end_ms: segment.endMs,
+      speaker: segment.speaker ?? null,
       embedding: asPgVector(embeddings[index]),
     }));
 
@@ -103,6 +105,54 @@ export async function processEpisode(episodeId: string) {
       .eq("id", episodeId);
     if (boundariesError) {
       await fail(boundariesError.message);
+    }
+
+    try {
+      const outline = buildCompressedOutline(rawSegments);
+      const { data: titleRow, error: titleError } = await admin
+        .from("episodes")
+        .select("title")
+        .eq("id", episodeId)
+        .maybeSingle();
+      if (titleError) {
+        throw new Error(`Failed to load episode title: ${titleError.message}`);
+      }
+
+      const episodeTitle =
+        titleRow && typeof titleRow.title === "string" ? titleRow.title : undefined;
+      const topicSegments = await detectTopicSegments(outline, episodeTitle);
+
+      if (topicSegments.length > 0) {
+        const topicTexts = topicSegments.map((segment) => `${segment.label}: ${segment.summary}`);
+        const topicEmbeddings = await embedBatch(topicTexts);
+        if (topicEmbeddings.length !== topicSegments.length) {
+          throw new Error("Embedding count mismatch for topic segments");
+        }
+
+        await admin.from("topic_segments").delete().eq("episode_id", episodeId);
+
+        const topicRows = topicSegments.map((segment, index) => ({
+          episode_id: episodeId,
+          label: segment.label,
+          summary: segment.summary,
+          start_ms: segment.startMs,
+          end_ms: segment.endMs,
+          embedding: asPgVector(topicEmbeddings[index]),
+        }));
+        const { error: topicInsertError } = await admin.from("topic_segments").insert(topicRows);
+        if (topicInsertError) {
+          throw new Error(`Failed to insert topic segments: ${topicInsertError.message}`);
+        }
+      }
+
+      console.log(
+        `[pipeline][${episodeId}] topic segmentation produced ${topicSegments.length} segments`
+      );
+    } catch (topicSegmentationError) {
+      console.warn(
+        `[pipeline][${episodeId}] topic segmentation skipped due to error`,
+        topicSegmentationError
+      );
     }
 
     const { error: doneError } = await admin.from("episodes").update({ status: "ready" }).eq("id", episodeId);

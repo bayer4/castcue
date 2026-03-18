@@ -9,6 +9,26 @@ interface RawSegment {
   text: string;
   startMs: number;
   endMs: number;
+  speaker?: number;
+}
+
+function getDominantSpeaker(words: TranscriptWord[]): number | undefined {
+  const speakerCounts = new Map<number, number>();
+  for (const word of words) {
+    if (typeof word.speaker !== "number") continue;
+    speakerCounts.set(word.speaker, (speakerCounts.get(word.speaker) ?? 0) + 1);
+  }
+
+  let dominantSpeaker: number | undefined;
+  let maxCount = 0;
+  for (const [speaker, count] of speakerCounts.entries()) {
+    if (count > maxCount) {
+      dominantSpeaker = speaker;
+      maxCount = count;
+    }
+  }
+
+  return dominantSpeaker;
 }
 
 /**
@@ -46,6 +66,7 @@ export function sliceIntoSegments(words: TranscriptWord[]): RawSegment[] {
         text: segmentWords.map((w) => w.text).join(" ").trim(),
         startMs: segmentStart,
         endMs: word.end,
+        speaker: getDominantSpeaker(segmentWords),
       });
 
       // Reset for next segment
@@ -62,6 +83,7 @@ export function sliceIntoSegments(words: TranscriptWord[]): RawSegment[] {
       text: segmentWords.map((w) => w.text).join(" ").trim(),
       startMs: segmentStart,
       endMs: segmentWords[segmentWords.length - 1].end,
+      speaker: getDominantSpeaker(segmentWords),
     });
   }
 
