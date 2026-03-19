@@ -75,7 +75,9 @@ export async function POST(request: Request) {
             .from("episodes")
             .select("id")
             .in("podcast_id", podcastIds)
-            .eq("status", "ready");
+            .eq("status", "ready")
+            .order("published_at", { ascending: false })
+            .limit(3 * podcastIds.length);
 
           if (episodesError) {
             sendEvent({ type: "error", message: episodesError.message });
