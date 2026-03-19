@@ -546,7 +546,7 @@ function HomeContent() {
                 </div>
                 <p className="truncate text-[13px] font-semibold leading-tight">{clip.episodeTitle}</p>
                 <p className="mt-0.5 truncate text-[12px] text-[var(--text-tertiary)]">
-                  {clip.podcastTitle} · {formatTimestamp(clip.startMs)} · {durationSec}s
+                  {clip.podcastTitle} · {formatTimestamp(clip.startMs)}–{formatTimestamp(clip.endMs)} · {durationSec}s
                 </p>
                 {isDebugMode && (
                   <p className="mt-1 text-[11px] text-[var(--text-secondary)]">
