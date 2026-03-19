@@ -72,7 +72,11 @@ export async function POST(request: Request) {
   for (const pod of podcasts) {
     try {
       const feed = await parser.parseURL(pod.rss_url);
-      const items = feed.items ?? [];
+      const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+      const items = (feed.items ?? []).filter((item) => {
+        if (!item.pubDate) return false;
+        return new Date(item.pubDate) >= cutoff;
+      });
 
       const episodeRows = items
         .map((item) => {
