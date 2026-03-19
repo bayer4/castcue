@@ -822,10 +822,17 @@ async function refineBoundariesWithLLM(
       keywordSet.add("machine learning");
     }
     const keywords = [...keywordSet];
+    const keywordRegexes = keywords.map((keyword) => {
+      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`\\b${escaped}\\b`, "i");
+    });
     const firstMentionIdx = overlapping.findIndex((segment) => {
       const text = segment.text.toLowerCase();
-      return keywords.some((keyword) => text.includes(keyword));
+      return keywordRegexes.some((regex) => regex.test(text));
     });
+    console.log(
+      `[search:v5] topic="${topic}" keyword anchor: firstMentionIdx=${firstMentionIdx}, matched="${overlapping[firstMentionIdx]?.text?.slice(0, 80)}"`
+    );
     const deterministicStartIdx =
       firstMentionIdx >= 0 ? Math.max(0, firstMentionIdx - 1) : null;
 
