@@ -780,6 +780,109 @@ For each segment, respond with ONLY the segment number and YES or NO:
 }
 
 // ============================================================
+// Boundary Refinement (post-verification)
+// ============================================================
+
+async function refineBoundariesWithLLM(
+  topic: string,
+  ranges: TopicRange[],
+  episodeSegments: SegmentRow[]
+): Promise<TopicRange[]> {
+  if (ranges.length === 0) return [];
+  if (!process.env.ANTHROPIC_API_KEY) return ranges;
+
+  const refined: TopicRange[] = [];
+
+  for (const range of ranges) {
+    const overlapping = episodeSegments.filter(
+      (seg) => seg.start_ms < range.endMs && seg.end_ms > range.startMs
+    );
+
+    if (overlapping.length < 4) {
+      refined.push(range);
+      continue;
+    }
+
+    const formatted = overlapping.map((seg, i) => {
+      const totalSec = Math.floor(seg.start_ms / 1000);
+      const mm = Math.floor(totalSec / 60);
+      const ss = totalSec % 60;
+      return `[${i}] (${mm}:${ss.toString().padStart(2, "0")}) ${seg.text.trim()}`;
+    });
+
+    const prompt = `You are editing a podcast clip about "${topic}". Below is the transcript of a candidate segment. Identify where "${topic}" becomes the PRIMARY focus and where that discussion naturally resolves.
+
+Rules:
+- START: pick 1-2 sentences BEFORE the topic takes focus, so the listener has context.
+- END: pick the sentence where the focused discussion wraps up. Do NOT include follow-up tangents or new sub-topics.
+- The goal is a clean, natural-sounding clip — not a tight keyword boundary.
+
+Transcript:
+${formatted.join("\n")}
+
+Respond with ONLY:
+START: [index]
+END: [index]`;
+
+    try {
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-haiku-4-5-20251001",
+          max_tokens: 50,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+
+      if (!response.ok) {
+        refined.push(range);
+        continue;
+      }
+
+      const data = (await response.json()) as {
+        content?: Array<{ type?: string; text?: string }>;
+      };
+      const text = data.content?.[0]?.text ?? "";
+
+      const startMatch = text.match(/START:\s*\[?(\d+)\]?/i);
+      const endMatch = text.match(/END:\s*\[?(\d+)\]?/i);
+
+      if (startMatch && endMatch) {
+        const startIdx = parseInt(startMatch[1], 10);
+        const endIdx = parseInt(endMatch[1], 10);
+
+        if (
+          startIdx >= 0 &&
+          endIdx < overlapping.length &&
+          startIdx <= endIdx
+        ) {
+          console.log(
+            `[search:v5] topic="${topic}" refined boundaries: [${startIdx}]-[${endIdx}] of ${overlapping.length} segments`
+          );
+          refined.push({
+            ...range,
+            startMs: overlapping[startIdx].start_ms,
+            endMs: overlapping[endIdx].end_ms,
+          });
+          continue;
+        }
+      }
+
+      refined.push(range);
+    } catch {
+      refined.push(range);
+    }
+  }
+
+  return refined;
+}
+
+// ============================================================
 // Main Search Function
 // ============================================================
 
@@ -987,9 +1090,17 @@ export async function searchEpisodeWithTimestamps(
     candidates,
     episodeSegments
   );
-  const merged = aggressiveMerge(llmFiltered, SEARCH_CONFIG.MERGE_GAP_MS);
+  const refined = await refineBoundariesWithLLM(
+    topic,
+    llmFiltered,
+    episodeSegments
+  );
+  const merged = aggressiveMerge(refined, SEARCH_CONFIG.MERGE_GAP_MS);
   const paddedAndSnapped = merged.map((range) =>
-    padAndSnapToSentence(range, episodeSegments)
+    padAndSnapToSentence(range, episodeSegments, {
+      prePadMs: 5000,
+      postPadMs: 3000,
+    })
   );
   return { ranges: paddedAndSnapped, method: "semantic" };
 }
@@ -1276,9 +1387,13 @@ function aggressiveMerge(ranges: TopicRange[], gapMs: number): TopicRange[] {
   return merged;
 }
 
-function padAndSnapToSentence(range: TopicRange, segments: SegmentRow[]): TopicRange {
-  const paddedStart = Math.max(0, range.startMs - PRE_PAD_MS);
-  const paddedEnd = range.endMs + POST_PAD_MS;
+function padAndSnapToSentence(
+  range: TopicRange,
+  segments: SegmentRow[],
+  opts?: { prePadMs?: number; postPadMs?: number }
+): TopicRange {
+  const paddedStart = Math.max(0, range.startMs - (opts?.prePadMs ?? PRE_PAD_MS));
+  const paddedEnd = range.endMs + (opts?.postPadMs ?? POST_PAD_MS);
 
   const startCandidates = segments.map((segment) => segment.start_ms);
   const endCandidates = segments.map((segment) => segment.end_ms);
