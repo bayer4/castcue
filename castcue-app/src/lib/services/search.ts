@@ -623,16 +623,31 @@ async function verifyTopicSegmentsWithLLM(
   };
 
   if (candidates.length === 0) return [];
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return candidates.map(({ startMs, endMs, occurrences, confidence }) => ({
-      startMs,
-      endMs,
-      occurrences,
-      confidence,
-    }));
-  }
 
-  const segments = candidates.map((candidate, index) => {
+  const adIndicators: Array<{ key: string; pattern: RegExp; isUrl?: boolean }> = [
+    { key: ".com", pattern: /\.com\b/i, isUrl: true },
+    { key: ".co/", pattern: /\.co\//i, isUrl: true },
+    { key: "https://", pattern: /https:\/\//i, isUrl: true },
+    { key: "http://", pattern: /http:\/\//i, isUrl: true },
+    { key: "promo code", pattern: /\bpromo code\b/i },
+    { key: "discount", pattern: /\bdiscount\b/i },
+    { key: "listeners get", pattern: /\blisteners get\b/i },
+    { key: "sign up at", pattern: /\bsign up at\b/i },
+    { key: "go to", pattern: /\bgo to\b/i },
+    { key: "use code", pattern: /\buse code\b/i },
+    { key: "special offer", pattern: /\bspecial offer\b/i },
+    { key: "free trial", pattern: /\bfree trial\b/i },
+    { key: "made possible by", pattern: /\bmade possible by\b/i },
+    { key: "brought to you by", pattern: /\bbrought to you by\b/i },
+    { key: "sponsored by", pattern: /\bsponsored by\b/i },
+  ];
+
+  const preparedCandidates: Array<{
+    candidate: TopicSegmentCandidate;
+    transcriptSnippet: string;
+  }> = [];
+
+  for (const candidate of candidates) {
     const overlappingText = episodeSegments
       .filter(
         (segment) =>
@@ -643,15 +658,52 @@ async function verifyTopicSegmentsWithLLM(
       .join(" ")
       .replace(/\s+/g, " ")
       .trim();
-    const transcriptSnippet =
-      overlappingText.length > 300
-        ? `${overlappingText.slice(0, 300)}...`
-        : overlappingText;
 
-    return `[${index}] Label: "${candidate.label}" | Summary: "${candidate.summary}"
-    Transcript: "${transcriptSnippet}"`;
-  });
-  const prompt = `You are a podcast topic relevance judge. For each segment below, determine if it is specifically about "${topic}" — not just tangentially related to the same domain. Use the transcript text as ground truth when it contradicts the label/summary.
+    const overlappingLower = overlappingText.toLowerCase();
+    const matchedIndicators = adIndicators.filter((indicator) =>
+      indicator.pattern.test(overlappingLower)
+    );
+    const distinctMatchCount = matchedIndicators.length;
+    const hasUrlIndicator = matchedIndicators.some((indicator) => indicator.isUrl);
+    const shouldRejectAdLike =
+      distinctMatchCount >= 3 || (distinctMatchCount >= 2 && hasUrlIndicator);
+
+    if (shouldRejectAdLike) {
+      console.log(
+        `[search:v5] topic="${topic}" rejected ad segment: "${candidate.label}"`
+      );
+      continue;
+    }
+
+    const transcriptSnippet =
+      overlappingText.length > 800
+        ? `${overlappingText.slice(0, 800)}...`
+        : overlappingText;
+    preparedCandidates.push({
+      candidate,
+      transcriptSnippet,
+    });
+  }
+
+  if (preparedCandidates.length === 0) return [];
+
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return preparedCandidates.map(
+      ({ candidate: { startMs, endMs, occurrences, confidence } }) => ({
+        startMs,
+        endMs,
+        occurrences,
+        confidence,
+      })
+    );
+  }
+
+  const segments = preparedCandidates.map(
+    ({ candidate, transcriptSnippet }, index) =>
+      `[${index}] Label: "${candidate.label}" | Summary: "${candidate.summary}"
+    Transcript: "${transcriptSnippet}"`
+  );
+  const prompt = `You are a podcast topic relevance judge. For each segment below, determine if it is PRIMARILY focused on "${topic}" as a core topic with sustained discussion (multiple sentences or turns), rather than a brief mention, tangential reference, or a segment that merely relates to the same broad domain. Use the transcript text as ground truth when it contradicts the label/summary.
 
 Segments:
 ${segments.join("\n")}
@@ -679,12 +731,14 @@ For each segment, respond with ONLY the segment number and YES or NO:
       console.warn(
         `[search:v5][llm] topic="${topic}" relevance check failed with status ${response.status}; falling back to unverified candidates`
       );
-      return candidates.map(({ startMs, endMs, occurrences, confidence }) => ({
-        startMs,
-        endMs,
-        occurrences,
-        confidence,
-      }));
+      return preparedCandidates.map(
+        ({ candidate: { startMs, endMs, occurrences, confidence } }) => ({
+          startMs,
+          endMs,
+          occurrences,
+          confidence,
+        })
+      );
     }
 
     const rawBody = await response.text();
@@ -693,12 +747,12 @@ For each segment, respond with ONLY the segment number and YES or NO:
       data.content?.[0]?.type === "text" ? (data.content[0].text ?? "") : "";
 
     const verified: TopicRange[] = [];
-    for (let i = 0; i < candidates.length; i++) {
+    for (let i = 0; i < preparedCandidates.length; i++) {
       const pattern = new RegExp(`\\[${i}\\]\\s*(YES|NO)`, "i");
       const match = responseText.match(pattern);
       const include = match?.[1]?.toUpperCase() === "YES";
       if (include) {
-        const candidate = candidates[i];
+        const candidate = preparedCandidates[i].candidate;
         verified.push({
           startMs: candidate.startMs,
           endMs: candidate.endMs,
@@ -714,12 +768,14 @@ For each segment, respond with ONLY the segment number and YES or NO:
       `[search:v5][llm] topic="${topic}" relevance check errored; falling back to unverified candidates`,
       error
     );
-    return candidates.map(({ startMs, endMs, occurrences, confidence }) => ({
-      startMs,
-      endMs,
-      occurrences,
-      confidence,
-    }));
+    return preparedCandidates.map(
+      ({ candidate: { startMs, endMs, occurrences, confidence } }) => ({
+        startMs,
+        endMs,
+        occurrences,
+        confidence,
+      })
+    );
   }
 }
 

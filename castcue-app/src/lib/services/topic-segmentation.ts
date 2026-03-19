@@ -119,6 +119,9 @@ Rules:
 - Use the timestamps exactly as they appear in the outline.
 - Speaker changes can signal topic shifts but not always.
 - Label each segment with a specific, descriptive name (e.g. "AI Agents in Financial Markets" not just "AI Discussion").
+- NEVER create a segment that spans across a sponsor read, ad break, or promotional message. Ads are NOT topic segments — treat them as boundaries between segments.
+- If a sponsor/ad read occurs in the middle of a discussion, split the discussion into two segments (before and after the ad).
+- Common ad signals: URLs, "go to", "promo code", "discount", "listeners get", "made possible by", "brought to you by".
 
 Transcript outline:
 ${outline}
