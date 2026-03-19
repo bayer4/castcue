@@ -63,7 +63,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: subError.message }, { status: 500 });
   }
 
-  const recentItems = (feed.items ?? []).slice(0, 3);
+  const recentItems = (feed.items ?? [])
+    .sort((a, b) => {
+      const da = a.pubDate ? new Date(a.pubDate).getTime() : 0;
+      const db = b.pubDate ? new Date(b.pubDate).getTime() : 0;
+      return db - da;
+    })
+    .slice(0, 3);
   const episodeRows = recentItems
     .map((item) => {
       const audioUrl = item.enclosure?.url ?? null;
