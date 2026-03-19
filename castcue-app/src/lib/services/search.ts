@@ -810,13 +810,103 @@ async function refineBoundariesWithLLM(
       return `[${i}] (${mm}:${ss.toString().padStart(2, "0")}) ${seg.text.trim()}`;
     });
 
+    const topicWords = topic
+      .toLowerCase()
+      .split(/\s+/)
+      .map((word) => word.trim())
+      .filter((word) => word.length > 0);
+    const keywordSet = new Set(topicWords);
+    if (keywordSet.has("ai")) {
+      keywordSet.add("artificial intelligence");
+      keywordSet.add("language model");
+      keywordSet.add("machine learning");
+    }
+    const keywords = [...keywordSet];
+    const firstMentionIdx = overlapping.findIndex((segment) => {
+      const text = segment.text.toLowerCase();
+      return keywords.some((keyword) => text.includes(keyword));
+    });
+    const deterministicStartIdx =
+      firstMentionIdx >= 0 ? Math.max(0, firstMentionIdx - 1) : null;
+
+    if (deterministicStartIdx !== null) {
+      const prompt = `You are editing a podcast clip about "${topic}".
+
+The clip starts at segment [${deterministicStartIdx}]. Find where the discussion of "${topic}" naturally resolves. Include the complete concluding thought. Stop before the conversation moves to a new question or tangent. If ambiguous, bias later.
+
+Transcript:
+${formatted.join("\n")}
+
+Respond with ONLY:
+END: [index]`;
+
+      try {
+        const response = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+            "anthropic-version": "2023-06-01",
+          },
+          body: JSON.stringify({
+            model: "claude-haiku-4-5-20251001",
+            max_tokens: 50,
+            messages: [{ role: "user", content: prompt }],
+          }),
+        });
+
+        if (!response.ok) {
+          refined.push({
+            ...range,
+            startMs: overlapping[deterministicStartIdx].start_ms,
+            endMs: range.endMs,
+          });
+          continue;
+        }
+
+        const data = (await response.json()) as {
+          content?: Array<{ type?: string; text?: string }>;
+        };
+        const text = data.content?.[0]?.text ?? "";
+        const endMatch = text.match(/END:\s*\[?(\d+)\]?/i);
+
+        if (endMatch) {
+          const endIdx = parseInt(endMatch[1], 10);
+          if (endIdx < overlapping.length && endIdx >= deterministicStartIdx) {
+            console.log(
+              `[search:v5] topic="${topic}" refined boundaries: [${deterministicStartIdx}]-[${endIdx}] of ${overlapping.length} segments`
+            );
+            refined.push({
+              ...range,
+              startMs: overlapping[deterministicStartIdx].start_ms,
+              endMs: overlapping[endIdx].end_ms,
+            });
+            continue;
+          }
+        }
+
+        refined.push({
+          ...range,
+          startMs: overlapping[deterministicStartIdx].start_ms,
+          endMs: range.endMs,
+        });
+      } catch {
+        refined.push({
+          ...range,
+          startMs: overlapping[deterministicStartIdx].start_ms,
+          endMs: range.endMs,
+        });
+      }
+      continue;
+    }
+
     const prompt = `You are editing a podcast clip about "${topic}". Below is the transcript of a candidate segment. Choose start and end indices that create a natural clip with context and a complete resolution.
 
 Rules:
-- START: anchor to where "${topic}" is FIRST introduced or brought up (the transition moment, first mention, or opening question).
-- START: include that introduction sentence and 1 sentence of setup before it when available.
-- START: anchor to the INTRODUCTION of the topic, not where the explanation gets dense.
-- START: if ambiguous, bias EARLIER.
+- START: Find the FIRST sentence in the transcript where "${topic}" is explicitly mentioned by name or clearly referenced.
+- START: Then set START to 1 sentence before that sentence (for listener context).
+- START: If the topic mention IS the first sentence, use index 0.
+- START: Do NOT choose START from the middle where explanation gets dense; anchor to first-mention context.
 - END: anchor to where the speaker finishes their core answer/explanation about "${topic}".
 - END: include the complete resolution of the point being made.
 - END: stop before the conversation moves to a new question, tangent, or different subtopic.
