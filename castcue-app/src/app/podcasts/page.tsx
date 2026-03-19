@@ -416,18 +416,10 @@ export default function PodcastsPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="line-clamp-2 text-sm font-semibold">{podcast.title ?? "Untitled podcast"}</p>
-                      {(podcast.pendingCount > 0 || podcast.processingCount > 0) ? (
-                        <p className="mt-0.5 truncate text-xs text-[var(--text-tertiary)]">Setting up...</p>
-                      ) : null}
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {(podcast.pendingCount > 0 || podcast.processingCount > 0) ? (
-                      <div className="flex flex-1 items-center gap-2 text-xs text-[var(--text-tertiary)]">
-                        <div className="h-3 w-3 animate-spin rounded-full border border-[var(--accent)] border-t-transparent" />
-                        Scanning episodes...
-                      </div>
-                    ) : podcast.failedCount > 0 ? (
+                    {podcast.failedCount > 0 && !(podcast.pendingCount > 0 || podcast.processingCount > 0) ? (
                       <button
                         onClick={() => processEpisodes(podcast.id)}
                         disabled={processingIds.has(podcast.id)}
@@ -441,7 +433,12 @@ export default function PodcastsPage() {
                       disabled={isGeneratingThisPodcast || isQueued || podcast.readyCount === 0}
                       className="btn-primary flex-1 justify-center gap-1.5 text-xs disabled:opacity-80"
                     >
-                      {isGeneratingThisPodcast ? (
+                      {(podcast.pendingCount > 0 || podcast.processingCount > 0) ? (
+                        <>
+                          <span className="h-3 w-3 animate-spin rounded-full border border-white/90 border-t-transparent" />
+                          Setting up...
+                        </>
+                      ) : isGeneratingThisPodcast ? (
                         <>
                           <span className="h-3 w-3 animate-spin rounded-full border border-white/90 border-t-transparent" />
                           Scanning...
