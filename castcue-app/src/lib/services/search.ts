@@ -9,7 +9,7 @@ import { averageVectors, cosine, mean, percentile, stdDev } from "./math";
 import { SEARCH_CONFIG, StructuralBoundary, TopicRange } from "./types";
 
 const PRE_PAD_MS = 25000; // 25 seconds before
-const POST_PAD_MS = 15000; // 15 seconds after
+const POST_PAD_MS = 8000; // 8 seconds after — enough to finish a thought, not drag into next topic
 const SNAP_WINDOW_MS = 10000; // max 10s beyond pad to find sentence boundary
 
 interface SegmentRow {
