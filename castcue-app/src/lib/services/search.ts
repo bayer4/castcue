@@ -810,12 +810,17 @@ async function refineBoundariesWithLLM(
       return `[${i}] (${mm}:${ss.toString().padStart(2, "0")}) ${seg.text.trim()}`;
     });
 
-    const prompt = `You are editing a podcast clip about "${topic}". Below is the transcript of a candidate segment. Identify where "${topic}" becomes the PRIMARY focus and where that discussion naturally resolves.
+    const prompt = `You are editing a podcast clip about "${topic}". Below is the transcript of a candidate segment. Choose start and end indices that create a natural clip with context and a complete resolution.
 
 Rules:
-- START: pick 1-2 sentences BEFORE the topic takes focus, so the listener has context.
-- END: pick the sentence where the focused discussion wraps up. Do NOT include follow-up tangents or new sub-topics.
-- The goal is a clean, natural-sounding clip — not a tight keyword boundary.
+- START: anchor to where "${topic}" is FIRST introduced or brought up (the transition moment, first mention, or opening question).
+- START: include that introduction sentence and 1 sentence of setup before it when available.
+- START: anchor to the INTRODUCTION of the topic, not where the explanation gets dense.
+- START: if ambiguous, bias EARLIER.
+- END: anchor to where the speaker finishes their core answer/explanation about "${topic}".
+- END: include the complete resolution of the point being made.
+- END: stop before the conversation moves to a new question, tangent, or different subtopic.
+- END: if ambiguous, bias LATER.
 
 Transcript:
 ${formatted.join("\n")}
