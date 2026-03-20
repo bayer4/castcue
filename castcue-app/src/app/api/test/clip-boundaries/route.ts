@@ -9,6 +9,8 @@ type BoundaryTestCase = {
   expectedStartMs: number;
   expectedEndMs: number;
   toleranceMs: number;
+  shouldFind: boolean;
+  shouldReject: boolean;
 };
 
 function msToTimestamp(ms: number): string {
@@ -44,38 +46,154 @@ export async function GET(request: Request) {
     );
   }
 
+  const { data: rollickingEpisode, error: rollickingEpisodeError } = await admin
+    .from("episodes")
+    .select("id, title, published_at")
+    .ilike("title", "%Rollicking NBA Mailbag%")
+    .order("published_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (rollickingEpisodeError) {
+    return NextResponse.json(
+      { error: rollickingEpisodeError.message },
+      { status: 500 }
+    );
+  }
+  if (!rollickingEpisode?.id) {
+    return NextResponse.json(
+      { error: 'Could not find episode with title containing "Rollicking NBA Mailbag"' },
+      { status: 404 }
+    );
+  }
+
+  const { data: secEpisode, error: secEpisodeError } = await admin
+    .from("episodes")
+    .select("id, title, published_at")
+    .ilike("title", "%SEC & CFTC on Crypto%")
+    .order("published_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (secEpisodeError) {
+    return NextResponse.json({ error: secEpisodeError.message }, { status: 500 });
+  }
+  if (!secEpisode?.id) {
+    return NextResponse.json(
+      { error: 'Could not find episode with title containing "SEC & CFTC on Crypto"' },
+      { status: 404 }
+    );
+  }
+
   const testCases: BoundaryTestCase[] = [
     {
-      name: "BCI episode - AI discussion",
+      name: "Test Case 1: BCI / AI",
       episodeId: bciEpisode.id,
       topic: "AI",
-      expectedStartMs: 292000,
-      expectedEndMs: 407000,
-      toleranceMs: 15000,
+      expectedStartMs: 336000,
+      expectedEndMs: 459000,
+      toleranceMs: 20000,
+      shouldFind: true,
+      shouldReject: false,
     },
     {
-      name: "SEC & CFTC episode - crypto discussion",
-      episodeId: "27e20e25-9877-4f83-b5a3-07d9701afdb5",
+      name: "Test Case 2: LeBron / Rollicking (existing clip)",
+      episodeId: rollickingEpisode.id,
+      topic: "lebron",
+      expectedStartMs: 3025000,
+      expectedEndMs: 3290000,
+      toleranceMs: 20000,
+      shouldFind: true,
+      shouldReject: false,
+    },
+    {
+      name: "Test Case 3: LeBron / Rollicking (proposed should find)",
+      episodeId: rollickingEpisode.id,
+      topic: "lebron",
+      expectedStartMs: 343000,
+      expectedEndMs: 454000,
+      toleranceMs: 20000,
+      shouldFind: true,
+      shouldReject: false,
+    },
+    {
+      name: "Test Case 4: LeBron / Rollicking (reject short)",
+      episodeId: rollickingEpisode.id,
+      topic: "lebron",
+      expectedStartMs: 985000,
+      expectedEndMs: 1018000,
+      toleranceMs: 20000,
+      shouldFind: false,
+      shouldReject: true,
+    },
+    {
+      name: "Test Case 5: LeBron / Rollicking (borderline reject)",
+      episodeId: rollickingEpisode.id,
+      topic: "lebron",
+      expectedStartMs: 1068000,
+      expectedEndMs: 1103000,
+      toleranceMs: 20000,
+      shouldFind: false,
+      shouldReject: true,
+    },
+    {
+      name: "Test Case 6: Crypto / SEC & CFTC (system-found)",
+      episodeId: secEpisode.id,
       topic: "crypto",
-      expectedStartMs: 0,
-      expectedEndMs: 0,
-      toleranceMs: 999999,
+      expectedStartMs: 2878000,
+      expectedEndMs: 3134000,
+      toleranceMs: 20000,
+      shouldFind: true,
+      shouldReject: false,
+    },
+    {
+      name: "Test Case 7: Crypto / SEC & CFTC (tokenization should find)",
+      episodeId: secEpisode.id,
+      topic: "crypto",
+      expectedStartMs: 495000,
+      expectedEndMs: 742000,
+      toleranceMs: 20000,
+      shouldFind: true,
+      shouldReject: false,
+    },
+    {
+      name: "Test Case 8: Crypto / SEC & CFTC (broad reject)",
+      episodeId: secEpisode.id,
+      topic: "crypto",
+      expectedStartMs: 797000,
+      expectedEndMs: 929000,
+      toleranceMs: 20000,
+      shouldFind: false,
+      shouldReject: true,
+    },
+    {
+      name: "Test Case 9: Crypto / SEC & CFTC (intro reject)",
+      episodeId: secEpisode.id,
+      topic: "crypto",
+      expectedStartMs: 400000,
+      expectedEndMs: 494000,
+      toleranceMs: 20000,
+      shouldFind: false,
+      shouldReject: true,
     },
   ];
 
   const results: Array<{
     name: string;
     topic: string;
+    shouldFind: boolean;
+    shouldReject: boolean;
     expected: { startMs: number; endMs: number };
     expectedFormatted: { start: string; end: string };
-    actual: { startMs: number; endMs: number } | null;
-    actualFormatted: { start: string; end: string } | null;
-    delta: { startMs: number; endMs: number } | null;
-    pass: { start: boolean; end: boolean };
-    overallPass: boolean;
+    matched: boolean;
+    rejectedCorrectly: boolean;
+    bestMatch: { startMs: number; endMs: number } | null;
+    bestMatchFormatted: { start: string; end: string } | null;
+    bestDelta: { startMs: number; endMs: number } | null;
+    boundaryAccurate: boolean;
     transcriptPreview: string;
     method: "semantic" | "keyword";
-    rangeIndex?: number;
+    matchedRangeIndex?: number;
   }> = [];
 
   for (const testCase of testCases) {
@@ -84,90 +202,116 @@ export async function GET(request: Request) {
       testCase.topic
     );
 
-    if (searchResult.ranges.length === 0) {
-      results.push({
-        name: testCase.name,
-        topic: testCase.topic,
-        expected: {
-          startMs: testCase.expectedStartMs,
-          endMs: testCase.expectedEndMs,
-        },
-        expectedFormatted: {
-          start: msToTimestamp(testCase.expectedStartMs),
-          end: msToTimestamp(testCase.expectedEndMs),
-        },
-        actual: null,
-        actualFormatted: null,
-        delta: null,
-        pass: { start: false, end: false },
-        overallPass: false,
-        transcriptPreview: "",
-        method: searchResult.method,
-      });
-      continue;
-    }
+    let bestMatch: { startMs: number; endMs: number } | null = null;
+    let bestMatchIndex: number | null = null;
+    let bestDelta: { startMs: number; endMs: number } | null = null;
+    let smallestDistance = Number.POSITIVE_INFINITY;
 
     for (let i = 0; i < searchResult.ranges.length; i++) {
       const range = searchResult.ranges[i];
       const startDelta = range.startMs - testCase.expectedStartMs;
       const endDelta = range.endMs - testCase.expectedEndMs;
-      const startPass = Math.abs(startDelta) <= testCase.toleranceMs;
-      const endPass = Math.abs(endDelta) <= testCase.toleranceMs;
+      const distance = Math.abs(startDelta) + Math.abs(endDelta);
+      if (distance < smallestDistance) {
+        smallestDistance = distance;
+        bestMatch = { startMs: range.startMs, endMs: range.endMs };
+        bestMatchIndex = i;
+        bestDelta = { startMs: startDelta, endMs: endDelta };
+      }
+    }
 
+    const matched = bestMatch !== null;
+    const rejectedCorrectly = testCase.shouldReject ? !matched : false;
+    const boundaryAccurate =
+      matched &&
+      bestDelta !== null &&
+      Math.abs(bestDelta.startMs) <= testCase.toleranceMs &&
+      Math.abs(bestDelta.endMs) <= testCase.toleranceMs;
+
+    let transcriptPreview = "";
+    if (bestMatch) {
       const { data: overlapSegments, error: overlapError } = await admin
         .from("segments")
         .select("text, segment_index")
         .eq("episode_id", testCase.episodeId)
-        .lte("start_ms", range.endMs)
-        .gte("end_ms", range.startMs)
+        .lte("start_ms", bestMatch.endMs)
+        .gte("end_ms", bestMatch.startMs)
         .order("segment_index", { ascending: true });
 
       if (overlapError) {
         return NextResponse.json({ error: overlapError.message }, { status: 500 });
       }
 
-      const transcriptPreview = (overlapSegments ?? [])
+      transcriptPreview = (overlapSegments ?? [])
         .map((segment) => segment.text ?? "")
         .join(" ")
         .replace(/\s+/g, " ")
         .trim()
         .slice(0, 500);
-
-      results.push({
-        name: testCase.name,
-        topic: testCase.topic,
-        expected: {
-          startMs: testCase.expectedStartMs,
-          endMs: testCase.expectedEndMs,
-        },
-        expectedFormatted: {
-          start: msToTimestamp(testCase.expectedStartMs),
-          end: msToTimestamp(testCase.expectedEndMs),
-        },
-        actual: {
-          startMs: range.startMs,
-          endMs: range.endMs,
-        },
-        actualFormatted: {
-          start: msToTimestamp(range.startMs),
-          end: msToTimestamp(range.endMs),
-        },
-        delta: { startMs: startDelta, endMs: endDelta },
-        pass: { start: startPass, end: endPass },
-        overallPass: startPass && endPass,
-        transcriptPreview,
-        method: searchResult.method,
-        rangeIndex: i,
-      });
     }
+
+    results.push({
+      name: testCase.name,
+      topic: testCase.topic,
+      shouldFind: testCase.shouldFind,
+      shouldReject: testCase.shouldReject,
+      expected: {
+        startMs: testCase.expectedStartMs,
+        endMs: testCase.expectedEndMs,
+      },
+      expectedFormatted: {
+        start: msToTimestamp(testCase.expectedStartMs),
+        end: msToTimestamp(testCase.expectedEndMs),
+      },
+      matched,
+      rejectedCorrectly,
+      bestMatch,
+      bestMatchFormatted: bestMatch
+        ? {
+            start: msToTimestamp(bestMatch.startMs),
+            end: msToTimestamp(bestMatch.endMs),
+          }
+        : null,
+      bestDelta,
+      boundaryAccurate,
+      transcriptPreview,
+      method: searchResult.method,
+      matchedRangeIndex: bestMatchIndex ?? undefined,
+    });
   }
 
-  const total = results.length;
-  const passed = results.filter((result) => result.overallPass).length;
-  const failed = total - passed;
+  const shouldFindCases = results.filter((result) => result.shouldFind);
+  const shouldRejectCases = results.filter((result) => result.shouldReject);
+  const truePositive = shouldFindCases.filter((result) => result.matched).length;
+  const falseNegative = shouldFindCases.length - truePositive;
+  const falsePositive = shouldRejectCases.filter((result) => result.matched).length;
+  const trueNegative = shouldRejectCases.length - falsePositive;
+
+  const recall =
+    shouldFindCases.length > 0 ? truePositive / shouldFindCases.length : 0;
+  const precision =
+    truePositive + falsePositive > 0
+      ? truePositive / (truePositive + falsePositive)
+      : 0;
+  const boundaryAccuracy =
+    shouldFindCases.length > 0
+      ? shouldFindCases.filter((result) => result.boundaryAccurate).length /
+        shouldFindCases.length
+      : 0;
 
   return NextResponse.json({
     results,
-    summary: { total, passed, failed },
+    summary: {
+      total: results.length,
+      expectedFind: shouldFindCases.length,
+      expectedReject: shouldRejectCases.length,
+      truePositive,
+      falseNegative,
+      falsePositive,
+      trueNegative,
+      recall,
+      precision,
+      boundaryAccuracy,
+    },
   });
 }

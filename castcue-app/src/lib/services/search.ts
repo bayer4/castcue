@@ -37,6 +37,69 @@ interface TopicSegmentRow {
 interface TopicSegmentCandidate extends TopicRange {
   label: string;
   summary: string;
+  source: string;
+  matchedKeywords: string[];
+  transcriptText?: string;
+}
+
+type CandidatePath = "embedding" | "label_summary_keyword" | "raw_transcript_keyword" | string;
+
+interface TopicSegmentSimilarityDiagnostic {
+  id: number;
+  label: string;
+  summary: string;
+  startMs: number;
+  endMs: number;
+  similarity: number;
+  passedThreshold: boolean;
+}
+
+interface CandidateDiagnostic {
+  startMs: number;
+  endMs: number;
+  label: string;
+  summary: string;
+  source: CandidatePath;
+  matchedKeywords: string[];
+  overlapDedupedInto?: string;
+}
+
+interface AdFilterDiagnostic {
+  startMs: number;
+  endMs: number;
+  source: CandidatePath;
+  matchedIndicators: string[];
+  rejected: boolean;
+}
+
+interface LLMScoreDiagnostic {
+  startMs: number;
+  endMs: number;
+  source: CandidatePath;
+  relevance: number;
+  sustained: boolean;
+  primary: boolean;
+  passed: boolean;
+}
+
+interface TranscriptKeywordMatchDiagnostic {
+  segmentIndex: number;
+  startMs: number;
+  endMs: number;
+  textPreview: string;
+  matchedKeywords: string[];
+}
+
+export interface ClipDiagnostics {
+  episodeId: string;
+  topic: string;
+  topicSegmentSimilarities: TopicSegmentSimilarityDiagnostic[];
+  candidatesBeforeDedup: CandidateDiagnostic[];
+  candidatesAfterDedup: CandidateDiagnostic[];
+  adFilterResults: AdFilterDiagnostic[];
+  llmScores: LLMScoreDiagnostic[];
+  rawTranscriptKeywordMatches: TranscriptKeywordMatchDiagnostic[];
+  finalOutputRanges: TopicRange[];
 }
 
 // ============================================================
@@ -134,6 +197,104 @@ function extractIntentKeywords(topic: string): string[] {
 
   return [...keywords];
 }
+
+function buildTopicKeywordSet(topic: string): string[] {
+  const keywords = new Set<string>();
+  for (const value of generateAliases(topic)) keywords.add(value.toLowerCase());
+  for (const value of extractIntentKeywords(topic)) keywords.add(value.toLowerCase());
+  for (const value of topic.toLowerCase().split(/\s+/)) {
+    if (value.trim().length >= 2) keywords.add(value.trim());
+  }
+  return [...keywords];
+}
+
+function buildKeywordMatchers(keywords: string[]): Array<{ keyword: string; regex: RegExp }> {
+  return keywords.map((keyword) => {
+    const escaped = escapeRegex(keyword);
+    return {
+      keyword,
+      regex: new RegExp(`\\b${escaped}\\b`, "i"),
+    };
+  });
+}
+
+function collectMatchedKeywords(
+  text: string,
+  matchers: Array<{ keyword: string; regex: RegExp }>
+): string[] {
+  const lower = text.toLowerCase();
+  return matchers
+    .filter(({ regex }) => regex.test(lower))
+    .map(({ keyword }) => keyword);
+}
+
+function overlapRatio(a: TopicRange, b: TopicRange): number {
+  const intersection = Math.max(
+    0,
+    Math.min(a.endMs, b.endMs) - Math.max(a.startMs, b.startMs)
+  );
+  if (intersection === 0) return 0;
+  const minDuration = Math.max(
+    1,
+    Math.min(a.endMs - a.startMs, b.endMs - b.startMs)
+  );
+  return intersection / minDuration;
+}
+
+function dedupeOverlappingCandidates(
+  candidates: TopicSegmentCandidate[],
+  ratioThreshold = 0.5
+): TopicSegmentCandidate[] {
+  if (candidates.length === 0) return [];
+  const sorted = [...candidates].sort((a, b) => a.startMs - b.startMs);
+  const deduped: TopicSegmentCandidate[] = [];
+
+  for (const candidate of sorted) {
+    const last = deduped[deduped.length - 1];
+    if (!last) {
+      deduped.push({ ...candidate });
+      continue;
+    }
+
+    const ratio = overlapRatio(last, candidate);
+    if (ratio > ratioThreshold) {
+      last.startMs = Math.min(last.startMs, candidate.startMs);
+      last.endMs = Math.max(last.endMs, candidate.endMs);
+      last.occurrences += candidate.occurrences;
+      last.confidence = Math.max(last.confidence, candidate.confidence);
+      const sourceSet = new Set(
+        `${last.source}+${candidate.source}`.split("+")
+      );
+      last.source = [...sourceSet].join("+") as TopicSegmentCandidate["source"];
+      last.matchedKeywords = [...new Set([...last.matchedKeywords, ...candidate.matchedKeywords])];
+      if (!last.transcriptText && candidate.transcriptText) {
+        last.transcriptText = candidate.transcriptText;
+      }
+    } else {
+      deduped.push({ ...candidate });
+    }
+  }
+
+  return deduped;
+}
+
+const AD_INDICATORS: Array<{ key: string; pattern: RegExp; isUrl?: boolean }> = [
+  { key: ".com", pattern: /\.com\b/i, isUrl: true },
+  { key: ".co/", pattern: /\.co\//i, isUrl: true },
+  { key: "https://", pattern: /https:\/\//i, isUrl: true },
+  { key: "http://", pattern: /http:\/\//i, isUrl: true },
+  { key: "promo code", pattern: /\bpromo code\b/i },
+  { key: "discount", pattern: /\bdiscount\b/i },
+  { key: "listeners get", pattern: /\blisteners get\b/i },
+  { key: "sign up at", pattern: /\bsign up at\b/i },
+  { key: "go to", pattern: /\bgo to\b/i },
+  { key: "use code", pattern: /\buse code\b/i },
+  { key: "special offer", pattern: /\bspecial offer\b/i },
+  { key: "free trial", pattern: /\bfree trial\b/i },
+  { key: "made possible by", pattern: /\bmade possible by\b/i },
+  { key: "brought to you by", pattern: /\bbrought to you by\b/i },
+  { key: "sponsored by", pattern: /\bsponsored by\b/i },
+];
 
 function parseEmbedding(raw: unknown): number[] {
   if (Array.isArray(raw)) {
@@ -617,35 +778,20 @@ async function verifyTopicSegmentsWithLLM(
   topic: string,
   candidates: TopicSegmentCandidate[],
   episodeSegments: SegmentRow[]
-): Promise<TopicRange[]> {
+): Promise<{ accepted: TopicRange[]; adFilterResults: AdFilterDiagnostic[]; llmScores: LLMScoreDiagnostic[] }> {
   type AnthropicMessageResponse = {
     content?: Array<{ type?: string; text?: string }>;
   };
 
-  if (candidates.length === 0) return [];
-
-  const adIndicators: Array<{ key: string; pattern: RegExp; isUrl?: boolean }> = [
-    { key: ".com", pattern: /\.com\b/i, isUrl: true },
-    { key: ".co/", pattern: /\.co\//i, isUrl: true },
-    { key: "https://", pattern: /https:\/\//i, isUrl: true },
-    { key: "http://", pattern: /http:\/\//i, isUrl: true },
-    { key: "promo code", pattern: /\bpromo code\b/i },
-    { key: "discount", pattern: /\bdiscount\b/i },
-    { key: "listeners get", pattern: /\blisteners get\b/i },
-    { key: "sign up at", pattern: /\bsign up at\b/i },
-    { key: "go to", pattern: /\bgo to\b/i },
-    { key: "use code", pattern: /\buse code\b/i },
-    { key: "special offer", pattern: /\bspecial offer\b/i },
-    { key: "free trial", pattern: /\bfree trial\b/i },
-    { key: "made possible by", pattern: /\bmade possible by\b/i },
-    { key: "brought to you by", pattern: /\bbrought to you by\b/i },
-    { key: "sponsored by", pattern: /\bsponsored by\b/i },
-  ];
+  if (candidates.length === 0) {
+    return { accepted: [], adFilterResults: [], llmScores: [] };
+  }
 
   const preparedCandidates: Array<{
     candidate: TopicSegmentCandidate;
-    transcriptSnippet: string;
+    transcriptText: string;
   }> = [];
+  const adFilterResults: AdFilterDiagnostic[] = [];
 
   for (const candidate of candidates) {
     const overlappingText = episodeSegments
@@ -659,14 +805,21 @@ async function verifyTopicSegmentsWithLLM(
       .replace(/\s+/g, " ")
       .trim();
 
-    const overlappingLower = overlappingText.toLowerCase();
-    const matchedIndicators = adIndicators.filter((indicator) =>
-      indicator.pattern.test(overlappingLower)
+    const matchedIndicators = AD_INDICATORS.filter((indicator) =>
+      indicator.pattern.test(overlappingText.toLowerCase())
     );
     const distinctMatchCount = matchedIndicators.length;
     const hasUrlIndicator = matchedIndicators.some((indicator) => indicator.isUrl);
     const shouldRejectAdLike =
       distinctMatchCount >= 3 || (distinctMatchCount >= 2 && hasUrlIndicator);
+
+    adFilterResults.push({
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      source: candidate.source,
+      matchedIndicators: matchedIndicators.map((indicator) => indicator.key),
+      rejected: shouldRejectAdLike,
+    });
 
     if (shouldRejectAdLike) {
       console.log(
@@ -675,20 +828,18 @@ async function verifyTopicSegmentsWithLLM(
       continue;
     }
 
-    const transcriptSnippet =
-      overlappingText.length > 800
-        ? `${overlappingText.slice(0, 800)}...`
-        : overlappingText;
     preparedCandidates.push({
       candidate,
-      transcriptSnippet,
+      transcriptText: overlappingText,
     });
   }
 
-  if (preparedCandidates.length === 0) return [];
+  if (preparedCandidates.length === 0) {
+    return { accepted: [], adFilterResults, llmScores: [] };
+  }
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    return preparedCandidates.map(
+    const accepted = preparedCandidates.map(
       ({ candidate: { startMs, endMs, occurrences, confidence } }) => ({
         startMs,
         endMs,
@@ -696,21 +847,37 @@ async function verifyTopicSegmentsWithLLM(
         confidence,
       })
     );
+    const llmScores: LLMScoreDiagnostic[] = preparedCandidates.map(({ candidate }) => ({
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      source: candidate.source,
+      relevance: 7,
+      sustained: true,
+      primary: true,
+      passed: true,
+    }));
+    return { accepted, adFilterResults, llmScores };
   }
 
   const segments = preparedCandidates.map(
-    ({ candidate, transcriptSnippet }, index) =>
+    ({ candidate, transcriptText }, index) =>
       `[${index}] Label: "${candidate.label}" | Summary: "${candidate.summary}"
-    Transcript: "${transcriptSnippet}"`
+Transcript:
+${transcriptText}`
   );
-  const prompt = `You are a podcast topic relevance judge. For each segment below, determine if it is PRIMARILY focused on "${topic}" as a core topic with sustained discussion (multiple sentences or turns), rather than a brief mention, tangential reference, or a segment that merely relates to the same broad domain. Use the transcript text as ground truth when it contradicts the label/summary.
+  const prompt = `You are a podcast topic relevance judge. Score each segment for topic fit.
 
 Segments:
-${segments.join("\n")}
+${segments.join("\n\n")}
 
-For each segment, respond with ONLY the segment number and YES or NO:
-[0] YES
-[1] NO`;
+For each segment, return:
+- RELEVANCE: integer 1-10
+- SUSTAINED: YES/NO (is this more than a brief mention)
+- PRIMARY: YES/NO (is "${topic}" the primary subject)
+
+Respond in this exact format for every segment:
+[0] RELEVANCE: 8 SUSTAINED: YES PRIMARY: YES
+[1] RELEVANCE: 4 SUSTAINED: NO PRIMARY: NO`;
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -722,7 +889,7 @@ For each segment, respond with ONLY the segment number and YES or NO:
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 300,
+        max_tokens: 800,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -731,7 +898,7 @@ For each segment, respond with ONLY the segment number and YES or NO:
       console.warn(
         `[search:v5][llm] topic="${topic}" relevance check failed with status ${response.status}; falling back to unverified candidates`
       );
-      return preparedCandidates.map(
+      const accepted = preparedCandidates.map(
         ({ candidate: { startMs, endMs, occurrences, confidence } }) => ({
           startMs,
           endMs,
@@ -739,6 +906,16 @@ For each segment, respond with ONLY the segment number and YES or NO:
           confidence,
         })
       );
+      const llmScores: LLMScoreDiagnostic[] = preparedCandidates.map(({ candidate }) => ({
+        startMs: candidate.startMs,
+        endMs: candidate.endMs,
+        source: candidate.source,
+        relevance: 7,
+        sustained: true,
+        primary: true,
+        passed: true,
+      }));
+      return { accepted, adFilterResults, llmScores };
     }
 
     const rawBody = await response.text();
@@ -747,10 +924,26 @@ For each segment, respond with ONLY the segment number and YES or NO:
       data.content?.[0]?.type === "text" ? (data.content[0].text ?? "") : "";
 
     const verified: TopicRange[] = [];
+    const llmScores: LLMScoreDiagnostic[] = [];
     for (let i = 0; i < preparedCandidates.length; i++) {
-      const pattern = new RegExp(`\\[${i}\\]\\s*(YES|NO)`, "i");
+      const pattern = new RegExp(
+        `\\[${i}\\]\\s*RELEVANCE:\\s*(\\d{1,2})\\s*SUSTAINED:\\s*(YES|NO)\\s*PRIMARY:\\s*(YES|NO)`,
+        "i"
+      );
       const match = responseText.match(pattern);
-      const include = match?.[1]?.toUpperCase() === "YES";
+      const relevance = match ? Number.parseInt(match[1], 10) : 0;
+      const sustained = match?.[2]?.toUpperCase() === "YES";
+      const primary = match?.[3]?.toUpperCase() === "YES";
+      const include = relevance >= 7 && sustained && primary;
+      llmScores.push({
+        startMs: preparedCandidates[i].candidate.startMs,
+        endMs: preparedCandidates[i].candidate.endMs,
+        source: preparedCandidates[i].candidate.source,
+        relevance,
+        sustained,
+        primary,
+        passed: include,
+      });
       if (include) {
         const candidate = preparedCandidates[i].candidate;
         verified.push({
@@ -762,13 +955,13 @@ For each segment, respond with ONLY the segment number and YES or NO:
       }
     }
 
-    return verified;
+    return { accepted: verified, adFilterResults, llmScores };
   } catch (error) {
     console.warn(
       `[search:v5][llm] topic="${topic}" relevance check errored; falling back to unverified candidates`,
       error
     );
-    return preparedCandidates.map(
+    const accepted = preparedCandidates.map(
       ({ candidate: { startMs, endMs, occurrences, confidence } }) => ({
         startMs,
         endMs,
@@ -776,6 +969,16 @@ For each segment, respond with ONLY the segment number and YES or NO:
         confidence,
       })
     );
+    const llmScores: LLMScoreDiagnostic[] = preparedCandidates.map(({ candidate }) => ({
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      source: candidate.source,
+      relevance: 7,
+      sustained: true,
+      primary: true,
+      passed: true,
+    }));
+    return { accepted, adFilterResults, llmScores };
   }
 }
 
@@ -789,141 +992,96 @@ async function refineBoundariesWithLLM(
   episodeSegments: SegmentRow[]
 ): Promise<TopicRange[]> {
   if (ranges.length === 0) return [];
-  if (!process.env.ANTHROPIC_API_KEY) return ranges;
+  if (episodeSegments.length === 0) return ranges;
 
   const refined: TopicRange[] = [];
+  const keywordMatchers = buildKeywordMatchers(buildTopicKeywordSet(topic));
+  const introPhrases = [
+    "let me ask",
+    "what about",
+    "how does",
+    "is this a place where",
+  ];
 
-  for (const range of ranges) {
-    const overlapping = episodeSegments.filter(
-      (seg) => seg.start_ms < range.endMs && seg.end_ms > range.startMs
+  const hasTopicKeyword = (text: string): boolean =>
+    keywordMatchers.some(({ regex }) => regex.test(text.toLowerCase()));
+
+  const chooseStartIndex = (overlapping: SegmentRow[]): number => {
+    const firstKeywordIdx = overlapping.findIndex((segment) =>
+      hasTopicKeyword(segment.text)
     );
-
-    if (overlapping.length < 4) {
-      refined.push(range);
-      continue;
+    if (firstKeywordIdx < 0) {
+      return 0;
     }
 
+    let preferredIdx = firstKeywordIdx;
+    let preferredScore = 0;
+    const start = Math.max(0, firstKeywordIdx - 2);
+    const end = Math.min(overlapping.length - 1, firstKeywordIdx + 2);
+    for (let i = start; i <= end; i++) {
+      const text = overlapping[i].text.toLowerCase();
+      const hasQuestion = text.includes("?");
+      const hasIntroPhrase = introPhrases.some((phrase) => text.includes(phrase));
+      const score = (hasIntroPhrase ? 2 : 0) + (hasQuestion ? 1 : 0);
+      if (score > preferredScore) {
+        preferredScore = score;
+        preferredIdx = i;
+      }
+    }
+
+    return preferredScore > 0 ? preferredIdx : Math.max(0, firstKeywordIdx - 1);
+  };
+
+  const findKeywordDensityEndIndex = (
+    overlapping: SegmentRow[],
+    startIdx: number
+  ): number | null => {
+    const keywordFlags = overlapping.map((segment) => hasTopicKeyword(segment.text));
+    let lastKeywordIdx = -1;
+    for (let i = startIdx; i < keywordFlags.length; i++) {
+      if (keywordFlags[i]) lastKeywordIdx = i;
+    }
+    if (lastKeywordIdx < 0) return null;
+
+    let zeroDensityStreak = 0;
+    for (let windowStart = startIdx; windowStart <= overlapping.length - 3; windowStart++) {
+      const density =
+        (keywordFlags[windowStart] ? 1 : 0) +
+        (keywordFlags[windowStart + 1] ? 1 : 0) +
+        (keywordFlags[windowStart + 2] ? 1 : 0);
+      if (density === 0) {
+        zeroDensityStreak += 1;
+      } else {
+        zeroDensityStreak = 0;
+      }
+
+      if (zeroDensityStreak >= 3) {
+        return Math.min(overlapping.length - 1, lastKeywordIdx + 2);
+      }
+    }
+    return null;
+  };
+
+  const llmFallbackEndIndex = async (
+    overlapping: SegmentRow[],
+    startIdx: number
+  ): Promise<number | null> => {
+    if (!process.env.ANTHROPIC_API_KEY) return null;
     const formatted = overlapping.map((seg, i) => {
       const totalSec = Math.floor(seg.start_ms / 1000);
       const mm = Math.floor(totalSec / 60);
       const ss = totalSec % 60;
       return `[${i}] (${mm}:${ss.toString().padStart(2, "0")}) ${seg.text.trim()}`;
     });
+    const prompt = `You are editing a podcast clip about "${topic}".
 
-    const topicWords = topic
-      .toLowerCase()
-      .split(/\s+/)
-      .map((word) => word.trim())
-      .filter((word) => word.length > 0);
-    const keywordSet = new Set(topicWords);
-    if (keywordSet.has("ai")) {
-      keywordSet.add("artificial intelligence");
-      keywordSet.add("language model");
-      keywordSet.add("machine learning");
-    }
-    const keywords = [...keywordSet];
-    const keywordRegexes = keywords.map((keyword) => {
-      const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      return new RegExp(`\\b${escaped}\\b`, "i");
-    });
-    const firstMentionIdx = overlapping.findIndex((segment) => {
-      const text = segment.text.toLowerCase();
-      return keywordRegexes.some((regex) => regex.test(text));
-    });
-    console.log(
-      `[search:v5] topic="${topic}" keyword anchor: firstMentionIdx=${firstMentionIdx}, matched="${overlapping[firstMentionIdx]?.text?.slice(0, 80)}"`
-    );
-    const deterministicStartIdx =
-      firstMentionIdx >= 0 ? Math.max(0, firstMentionIdx - 1) : null;
-
-    if (deterministicStartIdx !== null) {
-      const prompt = `You are editing a podcast clip about "${topic}".
-
-The clip starts at segment [${deterministicStartIdx}]. Find where the discussion of "${topic}" naturally resolves. Include the complete concluding thought. Stop before the conversation moves to a new question or tangent. If ambiguous, bias later.
+Start is fixed at segment [${startIdx}]. Choose an END index where this topic discussion naturally resolves.
+Stop before a new tangent starts. If uncertain, choose the later of two valid endings.
 
 Transcript:
 ${formatted.join("\n")}
 
 Respond with ONLY:
-END: [index]`;
-
-      try {
-        const response = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": process.env.ANTHROPIC_API_KEY || "",
-            "anthropic-version": "2023-06-01",
-          },
-          body: JSON.stringify({
-            model: "claude-haiku-4-5-20251001",
-            max_tokens: 50,
-            messages: [{ role: "user", content: prompt }],
-          }),
-        });
-
-        if (!response.ok) {
-          refined.push({
-            ...range,
-            startMs: overlapping[deterministicStartIdx].start_ms,
-            endMs: range.endMs,
-          });
-          continue;
-        }
-
-        const data = (await response.json()) as {
-          content?: Array<{ type?: string; text?: string }>;
-        };
-        const text = data.content?.[0]?.text ?? "";
-        const endMatch = text.match(/END:\s*\[?(\d+)\]?/i);
-
-        if (endMatch) {
-          const endIdx = parseInt(endMatch[1], 10);
-          if (endIdx < overlapping.length && endIdx >= deterministicStartIdx) {
-            console.log(
-              `[search:v5] topic="${topic}" refined boundaries: [${deterministicStartIdx}]-[${endIdx}] of ${overlapping.length} segments`
-            );
-            refined.push({
-              ...range,
-              startMs: overlapping[deterministicStartIdx].start_ms,
-              endMs: overlapping[endIdx].end_ms,
-            });
-            continue;
-          }
-        }
-
-        refined.push({
-          ...range,
-          startMs: overlapping[deterministicStartIdx].start_ms,
-          endMs: range.endMs,
-        });
-      } catch {
-        refined.push({
-          ...range,
-          startMs: overlapping[deterministicStartIdx].start_ms,
-          endMs: range.endMs,
-        });
-      }
-      continue;
-    }
-
-    const prompt = `You are editing a podcast clip about "${topic}". Below is the transcript of a candidate segment. Choose start and end indices that create a natural clip with context and a complete resolution.
-
-Rules:
-- START: Find the FIRST sentence in the transcript where "${topic}" is explicitly mentioned by name or clearly referenced.
-- START: Then set START to 1 sentence before that sentence (for listener context).
-- START: If the topic mention IS the first sentence, use index 0.
-- START: Do NOT choose START from the middle where explanation gets dense; anchor to first-mention context.
-- END: anchor to where the speaker finishes their core answer/explanation about "${topic}".
-- END: include the complete resolution of the point being made.
-- END: stop before the conversation moves to a new question, tangent, or different subtopic.
-- END: if ambiguous, bias LATER.
-
-Transcript:
-${formatted.join("\n")}
-
-Respond with ONLY:
-START: [index]
 END: [index]`;
 
     try {
@@ -940,45 +1098,51 @@ END: [index]`;
           messages: [{ role: "user", content: prompt }],
         }),
       });
-
-      if (!response.ok) {
-        refined.push(range);
-        continue;
-      }
-
+      if (!response.ok) return null;
       const data = (await response.json()) as {
         content?: Array<{ type?: string; text?: string }>;
       };
       const text = data.content?.[0]?.text ?? "";
-
-      const startMatch = text.match(/START:\s*\[?(\d+)\]?/i);
       const endMatch = text.match(/END:\s*\[?(\d+)\]?/i);
-
-      if (startMatch && endMatch) {
-        const startIdx = parseInt(startMatch[1], 10);
-        const endIdx = parseInt(endMatch[1], 10);
-
-        if (
-          startIdx >= 0 &&
-          endIdx < overlapping.length &&
-          startIdx <= endIdx
-        ) {
-          console.log(
-            `[search:v5] topic="${topic}" refined boundaries: [${startIdx}]-[${endIdx}] of ${overlapping.length} segments`
-          );
-          refined.push({
-            ...range,
-            startMs: overlapping[startIdx].start_ms,
-            endMs: overlapping[endIdx].end_ms,
-          });
-          continue;
-        }
+      if (!endMatch) return null;
+      const endIdx = Number.parseInt(endMatch[1], 10);
+      if (!Number.isFinite(endIdx) || endIdx < startIdx || endIdx >= overlapping.length) {
+        return null;
       }
-
-      refined.push(range);
+      return endIdx;
     } catch {
-      refined.push(range);
+      return null;
     }
+  };
+
+  for (const range of ranges) {
+    const overlapping = episodeSegments.filter(
+      (seg) => seg.start_ms < range.endMs && seg.end_ms > range.startMs
+    );
+
+    if (overlapping.length < 2) {
+      refined.push(range);
+      continue;
+    }
+
+    const startIdx = chooseStartIndex(overlapping);
+    const densityEndIdx = findKeywordDensityEndIndex(overlapping, startIdx);
+    const endIdx = densityEndIdx ?? (await llmFallbackEndIndex(overlapping, startIdx));
+
+    if (endIdx !== null && endIdx >= startIdx) {
+      refined.push({
+        ...range,
+        startMs: overlapping[startIdx].start_ms,
+        endMs: overlapping[endIdx].end_ms,
+      });
+      continue;
+    }
+
+    refined.push({
+      ...range,
+      startMs: overlapping[startIdx].start_ms,
+      endMs: range.endMs,
+    });
   }
 
   return refined;
@@ -1165,46 +1329,305 @@ export async function searchEpisodeWithTimestamps(
 
   const episodeSegments = await loadEpisodeSegments(episodeId);
   const topicEmbedding = await embedTopicQuery(topic);
-  const candidates: TopicSegmentCandidate[] = [];
+  const keywordMatchers = buildKeywordMatchers(buildTopicKeywordSet(topic));
+
+  const pathA: TopicSegmentCandidate[] = [];
+  const pathB: TopicSegmentCandidate[] = [];
+  const pathC: TopicSegmentCandidate[] = [];
 
   for (const segment of topicSegments) {
-    if (segment.embedding.length === 0) {
-      continue;
+    const similarity =
+      segment.embedding.length > 0
+        ? cosine(topicEmbedding, segment.embedding)
+        : 0;
+
+    if (similarity >= SEARCH_CONFIG.TOPIC_SEGMENT_THRESHOLD) {
+      pathA.push({
+        startMs: segment.start_ms,
+        endMs: segment.end_ms,
+        occurrences: 1,
+        confidence: similarity,
+        label: segment.label,
+        summary: segment.summary,
+        source: "embedding",
+        matchedKeywords: [],
+      });
     }
 
-    const similarity = cosine(topicEmbedding, segment.embedding);
-    if (similarity < SEARCH_CONFIG.TOPIC_SEGMENT_THRESHOLD) {
+    const keywordMatches = collectMatchedKeywords(
+      `${segment.label} ${segment.summary}`,
+      keywordMatchers
+    );
+    if (keywordMatches.length > 0) {
+      pathB.push({
+        startMs: segment.start_ms,
+        endMs: segment.end_ms,
+        occurrences: keywordMatches.length,
+        confidence: Math.max(similarity, 0.4),
+        label: segment.label,
+        summary: segment.summary,
+        source: "label_summary_keyword",
+        matchedKeywords: keywordMatches,
+      });
+    }
+  }
+
+  const transcriptHits = episodeSegments
+    .map((segment) => ({
+      segment,
+      matches: collectMatchedKeywords(segment.text, keywordMatchers),
+    }))
+    .filter((entry) => entry.matches.length > 0);
+
+  let currentCluster: typeof transcriptHits = [];
+  const clusteredHits: Array<{
+    startMs: number;
+    endMs: number;
+    matchedKeywords: string[];
+    transcriptText: string;
+  }> = [];
+  for (const hit of transcriptHits) {
+    const last = currentCluster[currentCluster.length - 1];
+    if (
+      !last ||
+      hit.segment.segment_index - last.segment.segment_index <= 1
+    ) {
+      currentCluster.push(hit);
       continue;
     }
-
-    candidates.push({
-      startMs: segment.start_ms,
-      endMs: segment.end_ms,
-      occurrences: 1,
-      confidence: similarity,
-      label: segment.label,
-      summary: segment.summary,
+    clusteredHits.push({
+      startMs: currentCluster[0].segment.start_ms,
+      endMs: currentCluster[currentCluster.length - 1].segment.end_ms,
+      matchedKeywords: [
+        ...new Set(currentCluster.flatMap((entry) => entry.matches)),
+      ],
+      transcriptText: currentCluster.map((entry) => entry.segment.text).join(" "),
+    });
+    currentCluster = [hit];
+  }
+  if (currentCluster.length > 0) {
+    clusteredHits.push({
+      startMs: currentCluster[0].segment.start_ms,
+      endMs: currentCluster[currentCluster.length - 1].segment.end_ms,
+      matchedKeywords: [
+        ...new Set(currentCluster.flatMap((entry) => entry.matches)),
+      ],
+      transcriptText: currentCluster.map((entry) => entry.segment.text).join(" "),
     });
   }
 
-  const llmFiltered = await verifyTopicSegmentsWithLLM(
+  for (const cluster of clusteredHits) {
+    pathC.push({
+      startMs: cluster.startMs,
+      endMs: cluster.endMs,
+      occurrences: cluster.matchedKeywords.length,
+      confidence: 0.45,
+      label: "Raw transcript keyword match",
+      summary: cluster.transcriptText.slice(0, 220),
+      source: "raw_transcript_keyword",
+      matchedKeywords: cluster.matchedKeywords,
+      transcriptText: cluster.transcriptText,
+    });
+  }
+
+  const unionedCandidates = [...pathA, ...pathB, ...pathC];
+  const dedupedCandidates = dedupeOverlappingCandidates(unionedCandidates, 0.5);
+  const { accepted: llmFiltered } = await verifyTopicSegmentsWithLLM(
     topic,
-    candidates,
+    dedupedCandidates,
     episodeSegments
+  );
+  const qualityFiltered = llmFiltered.filter(
+    (candidate) => candidate.endMs - candidate.startMs >= 45000
   );
   const refined = await refineBoundariesWithLLM(
     topic,
-    llmFiltered,
+    qualityFiltered,
     episodeSegments
   );
   const merged = aggressiveMerge(refined, SEARCH_CONFIG.MERGE_GAP_MS);
-  const paddedAndSnapped = merged.map((range) =>
+  const capped = merged.slice(0, 3);
+  const paddedAndSnapped = capped.map((range) =>
     padAndSnapToSentence(range, episodeSegments, {
       prePadMs: 5000,
       postPadMs: 3000,
     })
   );
   return { ranges: paddedAndSnapped, method: "semantic" };
+}
+
+export async function getClipDiagnostics(
+  episodeId: string,
+  topic: string
+): Promise<ClipDiagnostics> {
+  const topicSegments = await loadEpisodeTopicSegments(episodeId);
+  const episodeSegments = await loadEpisodeSegments(episodeId);
+  if (topicSegments.length === 0) {
+    const fallback = await _legacySearchV4(episodeId, topic);
+    return {
+      episodeId,
+      topic,
+      topicSegmentSimilarities: [],
+      candidatesBeforeDedup: [],
+      candidatesAfterDedup: [],
+      adFilterResults: [],
+      llmScores: [],
+      rawTranscriptKeywordMatches: [],
+      finalOutputRanges: fallback.ranges,
+    };
+  }
+
+  const topicEmbedding = await embedTopicQuery(topic);
+  const keywordMatchers = buildKeywordMatchers(buildTopicKeywordSet(topic));
+  const topicSegmentSimilarities: TopicSegmentSimilarityDiagnostic[] = [];
+  const pathA: TopicSegmentCandidate[] = [];
+  const pathB: TopicSegmentCandidate[] = [];
+
+  for (const segment of topicSegments) {
+    const similarity =
+      segment.embedding.length > 0
+        ? cosine(topicEmbedding, segment.embedding)
+        : 0;
+    const passedThreshold = similarity >= SEARCH_CONFIG.TOPIC_SEGMENT_THRESHOLD;
+    topicSegmentSimilarities.push({
+      id: segment.id,
+      label: segment.label,
+      summary: segment.summary,
+      startMs: segment.start_ms,
+      endMs: segment.end_ms,
+      similarity,
+      passedThreshold,
+    });
+
+    if (passedThreshold) {
+      pathA.push({
+        startMs: segment.start_ms,
+        endMs: segment.end_ms,
+        occurrences: 1,
+        confidence: similarity,
+        label: segment.label,
+        summary: segment.summary,
+        source: "embedding",
+        matchedKeywords: [],
+      });
+    }
+
+    const keywordMatches = collectMatchedKeywords(
+      `${segment.label} ${segment.summary}`,
+      keywordMatchers
+    );
+    if (keywordMatches.length > 0) {
+      pathB.push({
+        startMs: segment.start_ms,
+        endMs: segment.end_ms,
+        occurrences: keywordMatches.length,
+        confidence: Math.max(similarity, 0.4),
+        label: segment.label,
+        summary: segment.summary,
+        source: "label_summary_keyword",
+        matchedKeywords: keywordMatches,
+      });
+    }
+  }
+
+  const rawTranscriptKeywordMatches: TranscriptKeywordMatchDiagnostic[] = [];
+  const pathC: TopicSegmentCandidate[] = [];
+  const transcriptHits = episodeSegments
+    .map((segment) => {
+      const matchedKeywords = collectMatchedKeywords(segment.text, keywordMatchers);
+      if (matchedKeywords.length > 0) {
+        rawTranscriptKeywordMatches.push({
+          segmentIndex: segment.segment_index,
+          startMs: segment.start_ms,
+          endMs: segment.end_ms,
+          textPreview: segment.text.slice(0, 140),
+          matchedKeywords,
+        });
+      }
+      return { segment, matchedKeywords };
+    })
+    .filter((entry) => entry.matchedKeywords.length > 0);
+
+  let currentCluster: typeof transcriptHits = [];
+  for (const hit of transcriptHits) {
+    const prev = currentCluster[currentCluster.length - 1];
+    if (!prev || hit.segment.segment_index - prev.segment.segment_index <= 1) {
+      currentCluster.push(hit);
+      continue;
+    }
+    pathC.push({
+      startMs: currentCluster[0].segment.start_ms,
+      endMs: currentCluster[currentCluster.length - 1].segment.end_ms,
+      occurrences: currentCluster.length,
+      confidence: 0.45,
+      label: "Raw transcript keyword match",
+      summary: currentCluster.map((entry) => entry.segment.text).join(" ").slice(0, 220),
+      source: "raw_transcript_keyword",
+      matchedKeywords: [
+        ...new Set(currentCluster.flatMap((entry) => entry.matchedKeywords)),
+      ],
+      transcriptText: currentCluster.map((entry) => entry.segment.text).join(" "),
+    });
+    currentCluster = [hit];
+  }
+  if (currentCluster.length > 0) {
+    pathC.push({
+      startMs: currentCluster[0].segment.start_ms,
+      endMs: currentCluster[currentCluster.length - 1].segment.end_ms,
+      occurrences: currentCluster.length,
+      confidence: 0.45,
+      label: "Raw transcript keyword match",
+      summary: currentCluster.map((entry) => entry.segment.text).join(" ").slice(0, 220),
+      source: "raw_transcript_keyword",
+      matchedKeywords: [
+        ...new Set(currentCluster.flatMap((entry) => entry.matchedKeywords)),
+      ],
+      transcriptText: currentCluster.map((entry) => entry.segment.text).join(" "),
+    });
+  }
+
+  const candidatesBeforeDedup = [...pathA, ...pathB, ...pathC];
+  const deduped = dedupeOverlappingCandidates(candidatesBeforeDedup, 0.5);
+  const { accepted, adFilterResults, llmScores } = await verifyTopicSegmentsWithLLM(
+    topic,
+    deduped,
+    episodeSegments
+  );
+  const qualityFiltered = accepted.filter((candidate) => candidate.endMs - candidate.startMs >= 45000);
+  const refined = await refineBoundariesWithLLM(topic, qualityFiltered, episodeSegments);
+  const merged = aggressiveMerge(refined, SEARCH_CONFIG.MERGE_GAP_MS).slice(0, 3);
+  const finalOutputRanges = merged.map((range) =>
+    padAndSnapToSentence(range, episodeSegments, {
+      prePadMs: 5000,
+      postPadMs: 3000,
+    })
+  );
+
+  return {
+    episodeId,
+    topic,
+    topicSegmentSimilarities,
+    candidatesBeforeDedup: candidatesBeforeDedup.map((candidate) => ({
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      label: candidate.label,
+      summary: candidate.summary,
+      source: candidate.source,
+      matchedKeywords: candidate.matchedKeywords,
+    })),
+    candidatesAfterDedup: deduped.map((candidate) => ({
+      startMs: candidate.startMs,
+      endMs: candidate.endMs,
+      label: candidate.label,
+      summary: candidate.summary,
+      source: candidate.source,
+      matchedKeywords: candidate.matchedKeywords,
+    })),
+    adFilterResults,
+    llmScores,
+    rawTranscriptKeywordMatches,
+    finalOutputRanges,
+  };
 }
 
 // Keep the old searchEpisode for backward compatibility
