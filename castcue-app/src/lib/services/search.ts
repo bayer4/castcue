@@ -1055,8 +1055,8 @@ async function refineBoundariesWithLLM(
         zeroDensityStreak = 0;
       }
 
-      if (zeroDensityStreak >= 3) {
-        return Math.min(overlapping.length - 1, lastKeywordIdx + 2);
+      if (zeroDensityStreak >= 5) {
+        return Math.min(overlapping.length - 1, lastKeywordIdx + 3);
       }
     }
     return null;
@@ -1127,7 +1127,21 @@ END: [index]`;
 
     const startIdx = chooseStartIndex(overlapping);
     const densityEndIdx = findKeywordDensityEndIndex(overlapping, startIdx);
-    const endIdx = densityEndIdx ?? (await llmFallbackEndIndex(overlapping, startIdx));
+    let endIdx: number | null = null;
+
+    if (densityEndIdx !== null) {
+      const originalDurationMs = Math.max(1, range.endMs - range.startMs);
+      const densityDurationMs =
+        overlapping[densityEndIdx].end_ms - overlapping[startIdx].start_ms;
+      const minAllowedDensityDurationMs = originalDurationMs * 0.6;
+      if (densityDurationMs >= minAllowedDensityDurationMs) {
+        endIdx = densityEndIdx;
+      } else {
+        endIdx = await llmFallbackEndIndex(overlapping, startIdx);
+      }
+    } else {
+      endIdx = await llmFallbackEndIndex(overlapping, startIdx);
+    }
 
     if (endIdx !== null && endIdx >= startIdx) {
       refined.push({
