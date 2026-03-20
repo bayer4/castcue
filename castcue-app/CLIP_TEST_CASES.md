@@ -69,4 +69,55 @@ Ground truth for evaluating clip boundary detection. Timestamps are relative to 
 
 ---
 
+---
+
+## Test Case 6: Crypto / SEC & CFTC (All-In) — system-found clip
+
+- **Episode:** Rewriting the Rules: The SEC & CFTC on Crypto, IPOs & the Future of American Markets
+- **Podcast:** All-In with Chamath, Jason, Sacks & Friedberg
+- **Topic:** crypto
+- **Current result:** 47:52–52:33 (281s)
+- **Ideal start:** 47:58 ("I think we you know can then to your point uh you know uh turbocharge it to continue our growth...")
+- **Ideal end:** 52:14 ("...and we don't want that for the digital world either")
+- **Notes:** Not too shabby. Start is 6s early, end is 19s late. Spotify timestamps are in sync with app for All-In (no offset).
+
+---
+
+## Test Case 7: Crypto / SEC & CFTC (All-In) — GPT-proposed, tokenization + systemic risk
+
+- **Episode:** Rewriting the Rules: The SEC & CFTC on Crypto, IPOs & the Future of American Markets
+- **Podcast:** All-In with Chamath, Jason, Sacks & Friedberg
+- **Topic:** crypto
+- **Should qualify:** YES — deeper crypto infrastructure convo (tokenization, autonomous agents, on-chain markets, 24/7 trading). Not memecoin stuff, real technology discussion.
+- **Ideal start:** 8:15 ("Let me ask both of you guys a question...")
+- **Ideal end:** 12:22 ("...we need to accommodate that")
+- **Currently detected:** Unknown — need to check if system found this
+- **Notes:** Strong topic pivot. Covers crypto as technology layer, not surface-level. User would give option to delete later if too niche.
+
+---
+
+## Test Case 8: Crypto / SEC & CFTC (All-In) — GPT-proposed, should NOT qualify
+
+- **Episode:** Rewriting the Rules: The SEC & CFTC on Crypto, IPOs & the Future of American Markets
+- **Podcast:** All-In with Chamath, Jason, Sacks & Friedberg
+- **Topic:** crypto
+- **Should qualify:** NO — gets too broad, crypto embedded in broader market risk discussion
+- **Ideal start:** 13:17 ("We're starting to see it in prediction markets...")
+- **Ideal end:** 15:29 ("...make sure that we're not allowing things to then blow up in our face.")
+- **Notes:** Covers leverage, systemic fragility, historical context. Not purely crypto — too broad to be a real crypto clip.
+
+---
+
+## Test Case 9: Crypto / SEC & CFTC (All-In) — GPT-proposed, borderline (leaning no)
+
+- **Episode:** Rewriting the Rules: The SEC & CFTC on Crypto, IPOs & the Future of American Markets
+- **Podcast:** All-In with Chamath, Jason, Sacks & Friedberg
+- **Topic:** crypto
+- **Should qualify:** NO (gun to head) — more of a personal intro about the speaker than a real crypto conversation
+- **Ideal start:** 6:40 ("every week my clients would get a subpoena from Gary Gensler...")
+- **Ideal end:** 8:14 ("...make sure that we're ready to accommodate that.")
+- **Notes:** First real crypto mention but it's framing/intro, not sustained discussion. If counted it would merge with the system-found clip. Mentions crypto firms, prediction markets, regulation-by-enforcement.
+
+---
+
 *More test cases coming...*
