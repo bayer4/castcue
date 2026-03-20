@@ -120,7 +120,7 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Nav */}
-        <nav className="mt-6 flex-1 space-y-1 px-3">
+        <nav className="mt-6 space-y-1 px-3">
           {navItems.map((item) => {
             const active = pathname === item.href;
             return (
@@ -134,22 +134,23 @@ function AppShellContent({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+
+          <div className="mt-4 border-t border-[var(--border-subtle)] pt-4">
+            <button
+              onClick={handleLogout}
+              className="nav-item w-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16,17 21,12 16,7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              Log out
+            </button>
+          </div>
         </nav>
 
-        {/* Footer */}
-        <div className="border-t border-[var(--border-subtle)] p-3">
-          <button
-            onClick={handleLogout}
-            className="nav-item w-full text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-              <polyline points="16,17 21,12 16,7" />
-              <line x1="21" y1="12" x2="9" y2="12" />
-            </svg>
-            Log out
-          </button>
-        </div>
+        <div className="flex-1" />
       </aside>
 
       {/* Main content */}
