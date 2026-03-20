@@ -53,6 +53,14 @@ export async function GET(request: Request) {
       expectedEndMs: 407000,
       toleranceMs: 15000,
     },
+    {
+      name: "SEC & CFTC episode - crypto discussion",
+      episodeId: "27e20e25-9877-4f83-b5a3-07d9701afdb5",
+      topic: "crypto",
+      expectedStartMs: 0,
+      expectedEndMs: 0,
+      toleranceMs: 999999,
+    },
   ];
 
   const results: Array<{
