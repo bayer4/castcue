@@ -20,6 +20,13 @@ function msToTimestamp(ms: number): string {
   return `${minutes}:${seconds}`;
 }
 
+function rangesOverlap(
+  range: { startMs: number; endMs: number },
+  expected: { startMs: number; endMs: number }
+): boolean {
+  return range.startMs < expected.endMs && range.endMs > expected.startMs;
+}
+
 export async function GET(request: Request) {
   // Debug endpoint: intentionally unauthenticated for local/dev testing.
   // Protect or remove this route before production exposure.
@@ -205,37 +212,59 @@ export async function GET(request: Request) {
     let bestMatch: { startMs: number; endMs: number } | null = null;
     let bestMatchIndex: number | null = null;
     let bestDelta: { startMs: number; endMs: number } | null = null;
-    let smallestDistance = Number.POSITIVE_INFINITY;
+    let smallestStartDistance = Number.POSITIVE_INFINITY;
+
+    let overlapMatch: { startMs: number; endMs: number } | null = null;
+    let overlapMatchIndex: number | null = null;
 
     for (let i = 0; i < searchResult.ranges.length; i++) {
       const range = searchResult.ranges[i];
-      const startDelta = range.startMs - testCase.expectedStartMs;
-      const endDelta = range.endMs - testCase.expectedEndMs;
-      const distance = Math.abs(startDelta) + Math.abs(endDelta);
-      if (distance < smallestDistance) {
-        smallestDistance = distance;
+
+      // shouldFind logic: choose best range by closest start time.
+      const startDistance = Math.abs(range.startMs - testCase.expectedStartMs);
+      if (startDistance < smallestStartDistance) {
+        smallestStartDistance = startDistance;
         bestMatch = { startMs: range.startMs, endMs: range.endMs };
         bestMatchIndex = i;
-        bestDelta = { startMs: startDelta, endMs: endDelta };
+        bestDelta = {
+          startMs: range.startMs - testCase.expectedStartMs,
+          endMs: range.endMs - testCase.expectedEndMs,
+        };
+      }
+
+      // shouldReject logic: check overlap with rejected time window.
+      if (
+        overlapMatch === null &&
+        rangesOverlap(
+          { startMs: range.startMs, endMs: range.endMs },
+          { startMs: testCase.expectedStartMs, endMs: testCase.expectedEndMs }
+        )
+      ) {
+        overlapMatch = { startMs: range.startMs, endMs: range.endMs };
+        overlapMatchIndex = i;
       }
     }
 
-    const matched = bestMatch !== null;
-    const rejectedCorrectly = testCase.shouldReject ? !matched : false;
+    const matched = testCase.shouldReject ? overlapMatch !== null : bestMatch !== null;
+    const rejectedCorrectly = testCase.shouldReject ? overlapMatch === null : false;
     const boundaryAccurate =
-      matched &&
+      testCase.shouldFind &&
+      bestMatch !== null &&
       bestDelta !== null &&
       Math.abs(bestDelta.startMs) <= testCase.toleranceMs &&
       Math.abs(bestDelta.endMs) <= testCase.toleranceMs;
 
+    const resultMatch = testCase.shouldReject ? overlapMatch : bestMatch;
+    const resultMatchIndex = testCase.shouldReject ? overlapMatchIndex : bestMatchIndex;
+
     let transcriptPreview = "";
-    if (bestMatch) {
+    if (resultMatch) {
       const { data: overlapSegments, error: overlapError } = await admin
         .from("segments")
         .select("text, segment_index")
         .eq("episode_id", testCase.episodeId)
-        .lte("start_ms", bestMatch.endMs)
-        .gte("end_ms", bestMatch.startMs)
+        .lte("start_ms", resultMatch.endMs)
+        .gte("end_ms", resultMatch.startMs)
         .order("segment_index", { ascending: true });
 
       if (overlapError) {
@@ -265,18 +294,18 @@ export async function GET(request: Request) {
       },
       matched,
       rejectedCorrectly,
-      bestMatch,
-      bestMatchFormatted: bestMatch
+      bestMatch: resultMatch,
+      bestMatchFormatted: resultMatch
         ? {
-            start: msToTimestamp(bestMatch.startMs),
-            end: msToTimestamp(bestMatch.endMs),
+            start: msToTimestamp(resultMatch.startMs),
+            end: msToTimestamp(resultMatch.endMs),
           }
         : null,
-      bestDelta,
+      bestDelta: testCase.shouldFind ? bestDelta : null,
       boundaryAccurate,
       transcriptPreview,
       method: searchResult.method,
-      matchedRangeIndex: bestMatchIndex ?? undefined,
+      matchedRangeIndex: resultMatchIndex ?? undefined,
     });
   }
 
