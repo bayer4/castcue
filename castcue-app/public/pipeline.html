@@ -87,7 +87,7 @@
     <div class="step-number">1</div>
     <div class="step-content">
       <div class="step-title">Transcribe</div>
-      <div class="step-desc">Every episode is transcribed with word-level timestamps</div>
+      <div class="step-desc">Every episode is transcribed via Deepgram Nova-2 with word-level timestamps and speaker diarization</div>
     </div>
   </div>
   <div class="connector"></div>
@@ -96,7 +96,7 @@
     <div class="step-number">2</div>
     <div class="step-content">
       <div class="step-title">Segment</div>
-      <div class="step-desc">AI reads the full transcript and identifies each distinct topic discussion &mdash; like a producer breaking an episode into chapters</div>
+      <div class="step-desc">Claude Sonnet reads the full transcript and identifies each distinct topic discussion &mdash; like a producer breaking an episode into chapters</div>
     </div>
   </div>
   <div class="connector"></div>
@@ -105,7 +105,7 @@
     <div class="step-number">3</div>
     <div class="step-content">
       <div class="step-title">Match</div>
-      <div class="step-desc">Your topics are searched against every segment using semantic understanding and keyword signals</div>
+      <div class="step-desc">Your topics are searched against every segment using OpenAI vector embeddings, semantic similarity, and keyword signals</div>
     </div>
   </div>
   <div class="connector"></div>
@@ -114,7 +114,7 @@
     <div class="step-number">4</div>
     <div class="step-content">
       <div class="step-title">Score &amp; Filter</div>
-      <div class="step-desc">Each match is scored for relevance and depth. Passing mentions, ads, and tangents are filtered out.</div>
+      <div class="step-desc">Claude Haiku scores each match for relevance, sustained discussion, and depth. Passing mentions, ads, and tangents are filtered out.</div>
     </div>
   </div>
   <div class="connector"></div>
@@ -123,7 +123,7 @@
     <div class="step-number">5</div>
     <div class="step-content">
       <div class="step-title">Trim</div>
-      <div class="step-desc">Boundaries are refined so each clip starts at the topic introduction and ends at its natural resolution</div>
+      <div class="step-desc">Clip boundaries are refined using keyword anchoring and LLM analysis so each clip starts at the topic introduction and ends at its natural resolution</div>
     </div>
   </div>
   <div class="connector"></div>
