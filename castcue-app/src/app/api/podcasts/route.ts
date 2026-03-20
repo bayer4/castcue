@@ -2,27 +2,6 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAuthenticatedUser } from "@/lib/supabase/auth-user";
 
-async function debugLog(location: string, message: string, data: Record<string, unknown>, hypothesisId: string) {
-  // #region agent log
-  await fetch("http://127.0.0.1:7293/ingest/136114ee-e2a1-4df2-b143-2ca115d2d365", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "5bb5a7",
-    },
-    body: JSON.stringify({
-      sessionId: "5bb5a7",
-      runId: "pre-fix",
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
-}
-
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -47,39 +26,6 @@ export async function GET() {
   if (episodesError) {
     return NextResponse.json({ error: episodesError.message }, { status: 500 });
   }
-
-  const allInSubscriptions = (subscriptions ?? [])
-    .map((sub) => {
-      const podcast = Array.isArray(sub.podcasts) ? sub.podcasts[0] : sub.podcasts;
-      if (!podcast) return null;
-      const title = typeof podcast.title === "string" ? podcast.title : "";
-      return {
-        podcastId: String(sub.podcast_id),
-        title,
-        rssUrl: String(podcast.rss_url),
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => Boolean(item))
-    .filter((item) => item.title.toLowerCase().includes("all-in"));
-
-  const allInEpisodeStatusCounts = (episodes ?? []).reduce<Record<string, number>>((acc, episode) => {
-    if (!allInSubscriptions.some((sub) => sub.podcastId === episode.podcast_id)) return acc;
-    const status = String(episode.status ?? "unknown");
-    acc[status] = (acc[status] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  void debugLog(
-    "src/app/api/podcasts/route.ts:GET:post-fetch",
-    "podcasts route fetched subscriptions and episode statuses",
-    {
-      subscriptionCount: (subscriptions ?? []).length,
-      podcastIdsCount: podcastIds.length,
-      allInSubscriptions,
-      allInEpisodeStatusCounts,
-    },
-    "H1-H2-H4",
-  );
 
   const totals = (episodes ?? []).reduce<
     Record<
@@ -118,29 +64,6 @@ export async function GET() {
       };
     })
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
-
-  const allInPayloadRows = payload
-    .filter((item) => (item.title ?? "").toLowerCase().includes("all-in"))
-    .map((item) => ({
-      id: item.id,
-      title: item.title,
-      readyCount: item.readyCount,
-      processingCount: item.processingCount,
-      pendingCount: item.pendingCount,
-      failedCount: item.failedCount,
-      episodeCount: item.episodeCount,
-    }));
-
-  void debugLog(
-    "src/app/api/podcasts/route.ts:GET:pre-response",
-    "podcasts route payload summary",
-    {
-      payloadCount: payload.length,
-      allInPayloadRows,
-      responseGeneratedAt: new Date().toISOString(),
-    },
-    "H1-H2-H3",
-  );
 
   return NextResponse.json(payload);
 }

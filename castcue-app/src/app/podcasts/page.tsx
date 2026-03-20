@@ -281,41 +281,6 @@ export default function PodcastsPage() {
     };
   }, [debouncedQuery]);
 
-  useEffect(() => {
-    const allInPodcast = podcasts.find((podcast) => (podcast.title ?? "").toLowerCase().includes("all-in"));
-    if (!allInPodcast) return;
-    const settingUpVisible = allInPodcast.pendingCount > 0 || allInPodcast.processingCount > 0;
-    // #region agent log
-    fetch("http://127.0.0.1:7293/ingest/136114ee-e2a1-4df2-b143-2ca115d2d365", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "5bb5a7",
-      },
-      body: JSON.stringify({
-        sessionId: "5bb5a7",
-        runId: "pre-fix",
-        hypothesisId: "H3-H5",
-        location: "src/app/podcasts/page.tsx:all-in-visibility-effect",
-        message: "all-in card render state",
-        data: {
-          id: allInPodcast.id,
-          title: allInPodcast.title,
-          pendingCount: allInPodcast.pendingCount,
-          processingCount: allInPodcast.processingCount,
-          readyCount: allInPodcast.readyCount,
-          failedCount: allInPodcast.failedCount,
-          settingUpVisible,
-          isGenerating,
-          activePodcastId,
-          queuedIds,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [podcasts, isGenerating, activePodcastId, queuedIds]);
-
   const subscribedSet = new Set([
     ...podcasts.map((podcast) => podcast.rss_url),
     ...optimisticFollows,
@@ -468,12 +433,7 @@ export default function PodcastsPage() {
                       disabled={isGeneratingThisPodcast || isQueued || podcast.readyCount === 0}
                       className="btn-primary flex-1 justify-center gap-1.5 text-xs disabled:opacity-80"
                     >
-                      {(podcast.pendingCount > 0 || podcast.processingCount > 0) ? (
-                        <>
-                          <span className="h-3 w-3 animate-spin rounded-full border border-white/90 border-t-transparent" />
-                          Setting up...
-                        </>
-                      ) : isGeneratingThisPodcast ? (
+                      {isGeneratingThisPodcast ? (
                         <>
                           <span className="h-3 w-3 animate-spin rounded-full border border-white/90 border-t-transparent" />
                           Scanning...
